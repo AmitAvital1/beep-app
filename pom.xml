@@ -11,6 +11,7 @@
     <modules>
         <module>beep-engine</module>
         <module>beep-server</module>
+        <module>dto</module>
     </modules>
 
     <build>

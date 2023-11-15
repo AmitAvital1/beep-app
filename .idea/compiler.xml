@@ -8,6 +8,7 @@
         <outputRelativeToContentRoot value="true" />
         <module name="beep-engine" />
         <module name="beep-server" />
+        <module name="dto" />
       </profile>
     </annotationProcessing>
   </component>

@@ -6,8 +6,10 @@ import beep.engine.ride.invitation.RideInvitation;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class UserImpl implements User{
+    private UUID userID;
     private String firstName;
     private String lastName;
     private String phoneAreaCode;
@@ -17,7 +19,8 @@ public class UserImpl implements User{
     private final List<RideInvitation> sentInvitations = new ArrayList<>();
     private final List<RideInvitation> receivedInvitations = new ArrayList<>();
 
-    public UserImpl(String firstName, String lastName, String phoneAreaCode, String phoneNumber){
+    public UserImpl(UUID userID, String firstName, String lastName, String phoneAreaCode, String phoneNumber){
+        this.userID = userID;
         this.firstName = firstName;
         this.lastName = lastName;
         this.phoneAreaCode = phoneAreaCode;
@@ -37,6 +40,16 @@ public class UserImpl implements User{
     @Override
     public String getPhoneNumber() {
         return phoneNumber;
+    }
+
+    @Override
+    public UUID userID() {
+        return userID;
+    }
+
+    @Override
+    public String getAreaCode() {
+        return phoneAreaCode;
     }
 
     @Override
