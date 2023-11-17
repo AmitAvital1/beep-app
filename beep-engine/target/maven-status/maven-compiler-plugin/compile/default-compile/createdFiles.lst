@@ -1,0 +1,9 @@
+beep\engine\location\Location.class
+beep\engine\ride\Ride.class
+beep\engine\ride\invitation\RideInvitation.class
+beep\engine\user\User.class
+beep\engine\user\UserImpl.class
+beep\engine\ride\invitation\InvitationStatus.class
+beep\engine\Main.class
+beep\engine\ride\invitation\RideImpl.class
+beep\engine\execution\RideExecution.class
