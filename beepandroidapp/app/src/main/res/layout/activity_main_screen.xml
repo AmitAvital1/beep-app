@@ -5,19 +5,44 @@
     android:id="@+id/main_screen"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainScreenActivity"
-    android:fitsSystemWindows="true">
+    android:fitsSystemWindows="true"
+    tools:context=".MainScreenActivity">
+
     <RelativeLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content">
-        <include
-            layout="@layout/toolbar"/>
+
+        <include layout="@layout/toolbar" />
+
+        <androidx.appcompat.widget.SearchView
+            android:id="@+id/searchView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@id/toolbar"
+            android:layout_alignBottom="@id/toolbar"
+            android:layout_marginLeft="80dp"
+            android:layout_marginRight="80dp"
+            android:iconifiedByDefault="false"
+            android:queryHint="Search Contacts"
+            android:background="@drawable/common_google_signin_btn_icon_dark_normal_background"
+            />
+
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/contactRecyclerView"
+            android:layout_width="wrap_content"
+            android:layout_height="60dp"
+            android:layout_below="@id/searchView"
+            android:layout_alignStart="@id/searchView"
+            android:layout_alignEnd="@id/searchView"
+            android:background="#90F6E4E4"
+            android:visibility="gone"/>
+
 
         <FrameLayout
             android:id="@+id/fragmentContainer"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_below="@id/toolbar"
             android:orientation="vertical" />
 
     </RelativeLayout>
@@ -26,9 +51,9 @@
         android:id="@+id/nav_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_gravity="start"
         app:headerLayout="@layout/header"
-        app:menu="@menu/main_menu"
-        android:layout_gravity="start"/>
+        app:menu="@menu/main_menu" />
 
 
 </androidx.drawerlayout.widget.DrawerLayout>

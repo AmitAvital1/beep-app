@@ -1,26 +1,50 @@
 package beep.app;
 
+import static java.security.AccessController.getContext;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.FragmentManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.provider.ContactsContract;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.maps.MapView;
 import com.google.android.material.navigation.NavigationView;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import beep.app.search.ContactItem;
+import beep.app.search.ContactItemAdapter;
 import login.UserDTO;
+import search.UserPhoneExistDTO;
 
 public class MainScreenActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+
+    private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 123;
+    private static boolean CONTACT_HAS_FETCHED = false;
+    private static boolean CONTACT_THREAD_HAS_CALLED = false;
 
     private DrawerLayout main_screen_layout;
     private NavigationView navigationView;
@@ -33,6 +57,13 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
     private MapFragment mapFragment;
     private FragmentManager fragmentManager;
 
+
+    private SearchView searchView;
+    private RecyclerView contactRecyclerView;
+    private ContactItemAdapter contactAdapter;
+    private List<ContactItem> contactList;
+    private Map<String, Boolean> phoneNumberToHasUser = new HashMap<>();
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,19 +75,23 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
                 .replace(R.id.fragmentContainer, mapFragment)
                 .commit();
 
-        userDTO = (UserDTO) getIntent().getSerializableExtra("userDTO");
+        //userDTO = (UserDTO) getIntent().getSerializableExtra("userDTO");
 
         main_screen_layout=findViewById(R.id.main_screen);
         navigationView=findViewById(R.id.nav_view);
         toolbar = findViewById(R.id.toolbar);
+        searchView = findViewById(R.id.searchView);
+        contactRecyclerView = findViewById(R.id.contactRecyclerView);
 
         fullName = navigationView.getHeaderView(0).findViewById(R.id.name_text_view);
         ridesNum = navigationView.getHeaderView(0).findViewById(R.id.num_rides_text_view);
-        fullName.setText(userDTO.getFirstName() + " " + userDTO.getLastName());
+        //fullName.setText(userDTO.getFirstName() + " " + userDTO.getLastName());
 
 
         setSupportActionBar(toolbar);
 
+        contactRecyclerView.bringToFront();
+        searchView.bringToFront();
         navigationView.bringToFront();
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this,main_screen_layout,toolbar,R.string.navigation_drawer_open,R.string.navigation_drawer_close);
         main_screen_layout.addDrawerListener(toggle);
@@ -67,6 +102,156 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         //Todo set timer to fetch user details
 
 
+        getSupportActionBar().setDisplayShowTitleEnabled(false);
+
+
+        contactList = new ArrayList<>();
+        contactAdapter = new ContactItemAdapter(contactList, item -> {
+            contactItemClicked(item);
+        });
+
+        contactRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+        contactRecyclerView.setAdapter(contactAdapter);
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                // Handle search query submission (if needed)
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                // Handle search query text change
+                updateContactList(newText);
+                return true;
+            }
+        });
+
+        searchView.setOnQueryTextFocusChangeListener((v, hasFocus) -> {
+            // Request permission to read contacts when the search view gains focus
+            if (hasFocus) {
+                requestContactsPermission();
+            }
+        });
+
+        // Set a close listener for the search view
+        searchView.setOnCloseListener(() -> {
+            // Hide the contact list when the search view is closed
+            contactRecyclerView.setVisibility(View.GONE);
+            return false;
+        });
+    }
+
+    private void requestContactsPermission() {
+        // Check if the permission is not granted
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS)
+                != PackageManager.PERMISSION_GRANTED) {
+            // Request the permission
+            ActivityCompat.requestPermissions(this,
+                    new String[]{android.Manifest.permission.READ_CONTACTS}, MY_PERMISSIONS_REQUEST_READ_CONTACTS);
+        } else {
+            // Permission already granted, proceed with contact retrieval
+            updateContactList("");
+        }
+    }
+    private void updateContactList(String query) {
+        // Query contacts based on the search query
+        contactList.clear();
+
+        Cursor cursor = getContentResolver().query(
+                ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                null,
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " LIKE ?",
+                new String[]{"%" + query + "%"},
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
+        );
+        if(CONTACT_HAS_FETCHED == false){
+            if(CONTACT_THREAD_HAS_CALLED == false)
+                updateAndFetchFirstTime(query);
+        }else {
+
+            if (cursor != null) {
+                int nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME);
+                int phoneNumberIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
+
+                while (cursor.moveToNext()) {
+                    // Check if the column indices are valid
+                    if (nameIndex >= 0 && phoneNumberIndex >= 0) {
+                        String name = cursor.getString(nameIndex);
+                        String phoneNumber = cursor.getString(phoneNumberIndex);
+                        if(phoneNumberToHasUser.get(phoneNumber) == true)
+                            contactList.add(new ContactItem(name, false));
+                        else
+                            contactList.add(new ContactItem(name, false));
+                    }
+                }
+
+                cursor.close();
+            }
+
+            // Update the RecyclerView with the new contact list
+            contactAdapter.notifyDataSetChanged();
+            if(searchView.hasFocus())
+                contactRecyclerView.setVisibility(contactList.isEmpty() ? View.GONE : View.VISIBLE);
+        }
+    }
+    private void updateAndFetchFirstTime(String query) {
+        Thread fetchItemsAndShow = new Thread(() -> {
+            List<UserPhoneExistDTO> listPhoneUsersDTO = new ArrayList<>();
+            Cursor cursor = getContentResolver().query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    null,
+                    null,
+                    null,
+                    ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
+            );
+            if (cursor != null) {
+                int nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME);
+                int phoneNumberIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER);
+
+                while (cursor.moveToNext()) {
+                    // Check if the column indices are valid
+                    if (nameIndex >= 0 && phoneNumberIndex >= 0) {
+                        String phoneNumber = cursor.getString(phoneNumberIndex);
+                        listPhoneUsersDTO.add(new UserPhoneExistDTO(phoneNumber));
+                    }
+                }
+                cursor.close();
+            }
+            //Checkkkkkingnggngngngngngngng.....
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            listPhoneUsersDTO.stream().forEach(dto -> phoneNumberToHasUser.put(dto.getPhoneNumber(),true));
+            CONTACT_HAS_FETCHED = true;
+            runOnUiThread(() -> {
+                updateContactList(query);
+            });
+        });
+        CONTACT_THREAD_HAS_CALLED = true;
+        fetchItemsAndShow.start();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == MY_PERMISSIONS_REQUEST_READ_CONTACTS) {
+            // Check if the permission was granted
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                updateContactList("");
+            } else {
+                // Permission denied, handle accordingly (e.g., show a message)
+                // You may want to explain why you need the permission before requesting again
+            }
+        }
+    }
+
+    private void contactItemClicked(ContactItem item) {
+        Toast.makeText(this, item.getContactName(), Toast.LENGTH_LONG).show();
     }
 
     @Override

@@ -71,6 +71,7 @@ public class MapFragment extends SupportMapFragment implements OnMapReadyCallbac
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
+        mMap.setPadding(0, 200, 0, 0);
         LatLng myLocation;
         if(currentLocation != null)
             myLocation = new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
