@@ -1,11 +1,13 @@
 package beep.app.util.http;
 
+import java.io.IOException;
 import java.util.function.Consumer;
 
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.Response;
 
 public class HttpClientUtil {
 
@@ -30,6 +32,9 @@ public class HttpClientUtil {
         call.enqueue(callback);
     }
 
+    public static Response runSync(Request request) throws IOException {
+        return HttpClientUtil.HTTP_CLIENT.newCall(request).execute();
+    }
 
     public static void shutdown() {
         System.out.println("Shutting down HTTP CLIENT");

@@ -5,7 +5,6 @@
     <style name="Theme.Beepandroidapp" parent="Base.Theme.Beepandroidapp">
         <item name="android:windowContentOverlay">@null</item>
         <item name="windowActionBarOverlay">true</item>
-        <item name="colorPrimary">@android:color/transparent</item>
     </style>
     <style name="Theme.Beepandroidapp.ActionBar.Transparent" parent="Theme.Beepandroidapp">
         <item name="android:windowContentOverlay">@null</item>

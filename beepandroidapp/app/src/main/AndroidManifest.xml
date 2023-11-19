@@ -19,7 +19,7 @@
         android:usesCleartextTraffic="true"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
+            android:name=".MainScreenActivity"
             android:exported="false" />
         <activity
             android:name=".RegisterActivity"
@@ -28,7 +28,7 @@
             android:name=".VerificationCodeActivity"
             android:exported="false" />
         <activity
-            android:name=".MainScreenActivity"
+            android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
