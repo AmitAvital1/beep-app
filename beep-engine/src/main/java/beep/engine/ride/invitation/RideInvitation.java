@@ -23,7 +23,6 @@ public class RideInvitation {
     }
     public void accept(){
         status = InvitationStatus.ACCEPTED;
-
     }
 
 }

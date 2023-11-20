@@ -2,7 +2,9 @@ package beep.app;
 
 import static java.security.AccessController.getContext;
 
+import static beep.app.util.Constants.INVITE;
 import static beep.app.util.Constants.IS_USERS;
+import static beep.app.util.Constants.REGISTER;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBarDrawerToggle;
@@ -34,6 +36,8 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,6 +48,8 @@ import beep.app.search.ContactItem;
 import beep.app.search.ContactItemAdapter;
 import beep.app.util.http.HttpClientUtil;
 import login.UserDTO;
+import okhttp3.Call;
+import okhttp3.Callback;
 import okhttp3.HttpUrl;
 import okhttp3.MediaType;
 import okhttp3.Request;
@@ -164,7 +170,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
                         String name = cursor.getString(nameIndex);
                         String phoneNumber = cursor.getString(phoneNumberIndex);
                         if(phoneNumberToHasUser.containsKey(phoneNumber))
-                            contactList.add(new ContactItem(name, phoneNumberToHasUser.get(phoneNumber)));
+                            contactList.add(new ContactItem(name,phoneNumber, phoneNumberToHasUser.get(phoneNumber)));
                     }
                 }
 
@@ -307,7 +313,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
             }
         });
 
-        searchView.setOnQueryTextFocusChangeListener((v, hasFocus) -> {
+        searchView.setOnQueryTextFocusChangeListener((v,hasFocus) -> {
             // Request permission to read contacts when the search view gains focus
             if (hasFocus) {
                 requestContactsPermission();
@@ -323,6 +329,36 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
     }
 
     private void contactItemClicked(ContactItem item) {
-        Toast.makeText(this, item.getContactName(), Toast.LENGTH_LONG).show();
+        String finalUrl = HttpUrl
+                .parse(INVITE)
+                .newBuilder()
+                .build()
+                .toString();
+
+        RequestBody dummyRequestBody = RequestBody.create("", MediaType.parse("application/json"));
+        Request request = new Request.Builder()
+                .url(finalUrl + item.getPhoneNumber())
+                .put(dummyRequestBody)
+                .build();
+        HttpClientUtil.runAsync(request, new Callback() {
+
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(MainScreenActivity.this, e.toString(), Toast.LENGTH_LONG).show();
+                    System.out.println(e.toString());
+                });
+            }
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
+                runOnUiThread(() -> {
+                    Toast.makeText(MainScreenActivity.this, responseBody, Toast.LENGTH_LONG).show();
+                });
+                if (response.code() == 400) { //Invalid code
+                }
+
+            }
+        });
     }
 }

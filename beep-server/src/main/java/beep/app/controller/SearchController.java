@@ -20,7 +20,7 @@ public class SearchController {
     private UserRepository userRepository;
 
     @Autowired
-    public SearchController(UserRepository userRepository, LoginCodeService loginCodeService){
+    public SearchController(UserRepository userRepository){
         this.userRepository = userRepository;
     }
 
@@ -38,7 +38,7 @@ public class SearchController {
         }
         return ResponseEntity.status(200).body(listUserPhoneExistDTO);
     }
-    private String cleanPhoneNumber(String phoneNumber) {
+    public static String cleanPhoneNumber(String phoneNumber) {
         // Remove spaces and dashes using regex
         return phoneNumber.replaceAll("[\\s-]+", "");
     }

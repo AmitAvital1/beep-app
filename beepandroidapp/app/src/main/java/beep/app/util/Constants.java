@@ -11,4 +11,5 @@ public class Constants {
     public final static String CODE = FULL_SERVER_PATH + "/code/";
     public final static String REGISTER = FULL_SERVER_PATH + "/register";
     public final static String IS_USERS = FULL_SERVER_PATH + "/has-user/list";
+    public final static String INVITE = FULL_SERVER_PATH + "/invite-beep/";
 }

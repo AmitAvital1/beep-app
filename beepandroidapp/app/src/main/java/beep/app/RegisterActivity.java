@@ -89,7 +89,7 @@ public class  RegisterActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 String responseBody = response.body().string();
-                if (response.code() == 400) { //Invalid code
+                if (response.code() == 400) {
                     runOnUiThread(() -> {
                         firstNameEditText.setBackgroundResource(R.drawable.edit_text_error);
                         firstNameEditText.setError("Invalid First Name");

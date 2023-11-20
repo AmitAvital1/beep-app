@@ -33,7 +33,7 @@ import com.google.android.gms.tasks.Task;
 public class MapFragment extends SupportMapFragment implements OnMapReadyCallback {
     private final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private Location currentLocation;
-    FusedLocationProviderClient fusedLocationProviderClient;
+    private FusedLocationProviderClient fusedLocationProviderClient;
 
 
     private GoogleMap mMap;
@@ -98,7 +98,7 @@ public class MapFragment extends SupportMapFragment implements OnMapReadyCallbac
                 // Permission granted, initialize the map
                 getLastLocation();
             } else {
-                Toast.makeText(requireActivity(), "Location premmision denied please allow premision (Im at map fragment)", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireActivity(), "Location permission denied please allow permission (Im at map fragment)", Toast.LENGTH_SHORT).show();
             }
         }
     }
