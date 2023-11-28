@@ -46,9 +46,16 @@ public class RideInvitationController {
             UserEntity userReceiverEntity = userRepository.findByPhoneNumber(cleanedPhoneNumber);
             if(userReceiverEntity == null)
                 return ResponseEntity.status(HttpServletResponse.SC_BAD_GATEWAY).body("Please invite to using beep!");
+
+            if(userSenderEntity.getOnRide() != null ||userReceiverEntity.getOnRide() != null )
+                return ResponseEntity.status(HttpServletResponse.SC_BAD_GATEWAY).body("Cannot send invitation while you / target on a ride.");
+
             RideInvitationEntity newInvitation = new RideInvitationEntity(userSenderEntity,userReceiverEntity,locationDTO.getLatitude(),locationDTO.getLongitude());
             userSenderEntity.addSentInvitation(newInvitation);
             userReceiverEntity.addReceiveInvitation(newInvitation);
+
+            userSenderEntity.setOnRide(newInvitation);
+            userReceiverEntity.setOnRide(newInvitation);
 
             userRepository.save(userSenderEntity);
             userRepository.save(userReceiverEntity);

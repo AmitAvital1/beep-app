@@ -75,7 +75,6 @@ public class MainActivity extends AppCompatActivity {
                 .newBuilder()
                 .build()
                 .toString();
-        System.out.println(finalUrl);
 
         Gson gson = new Gson();
         Integer regionNumber = new Integer(phoneRegion.getRegionNumber());

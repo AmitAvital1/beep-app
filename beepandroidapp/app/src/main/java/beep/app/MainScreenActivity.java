@@ -93,7 +93,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
                 .replace(R.id.fragmentContainer, mapFragment)
                 .commit();
 
-        //userDTO = (UserDTO) getIntent().getSerializableExtra("userDTO");
+        userDTO = (UserDTO) getIntent().getSerializableExtra("userDTO");
 
         main_screen_layout=findViewById(R.id.main_screen);
         navigationView=findViewById(R.id.nav_view);
@@ -103,7 +103,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         fullName = navigationView.getHeaderView(0).findViewById(R.id.name_text_view);
         ridesNum = navigationView.getHeaderView(0).findViewById(R.id.num_rides_text_view);
 
-        //fullName.setText(userDTO.getFirstName() + " " + userDTO.getLastName());
+        fullName.setText(userDTO.getFirstName() + " " + userDTO.getLastName());
 
         setSupportActionBar(toolbar);
 

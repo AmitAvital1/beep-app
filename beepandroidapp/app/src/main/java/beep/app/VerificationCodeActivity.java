@@ -101,7 +101,15 @@ public class VerificationCodeActivity extends AppCompatActivity {
                                 intent.putExtra("userDTO", userDTO);
                                 startActivity(intent);
                             });
+                        }else if(response.code() == 200) { //User exist
+                            UserDTO userDTO = gson.fromJson(responseBody, UserDTO.class);
+                            runOnUiThread(() -> {
+                                Intent intent = new Intent(VerificationCodeActivity.this, MainScreenActivity.class);
+                                intent.putExtra("userDTO", userDTO);
+                                startActivity(intent);
+                            });
                         }
+
 
                     }
                 });

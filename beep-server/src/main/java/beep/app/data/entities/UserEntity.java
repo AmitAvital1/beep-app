@@ -38,6 +38,10 @@ public class UserEntity {
     @OneToMany(mappedBy = "receiver", cascade = {CascadeType.PERSIST,CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH}, fetch = FetchType.LAZY)
     private List<RideInvitationEntity> receivedInvitations;
 
+    @ManyToOne(cascade = {CascadeType.PERSIST,CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH})
+    @JoinColumn(name = "on_ride")
+    private RideInvitationEntity onRide;
+
     public UserEntity(){
 
     }
@@ -47,6 +51,7 @@ public class UserEntity {
         this.lastName = lastName;
         this.phoneAreaCode = phoneAreaCode;
         this.phoneNumber = phoneNumber;
+        this.onRide = null;
     }
 
     public UserEntity(UUID userId, String firstName, String lastName, String phoneAreaCode, String phoneNumber) {
@@ -125,5 +130,13 @@ public class UserEntity {
 
     public void setReceivedInvitations(List<RideInvitationEntity> receivedInvitations) {
         this.receivedInvitations = receivedInvitations;
+    }
+
+    public RideInvitationEntity getOnRide() {
+        return onRide;
+    }
+
+    public void setOnRide(RideInvitationEntity onRide) {
+        this.onRide = onRide;
     }
 }
