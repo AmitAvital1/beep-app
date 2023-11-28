@@ -1,2 +1,3 @@
+location\LocationDTO.class
 login\UserDTO.class
 search\UserPhoneExistDTO.class

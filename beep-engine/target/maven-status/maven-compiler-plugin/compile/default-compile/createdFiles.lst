@@ -7,3 +7,4 @@ beep\engine\ride\invitation\InvitationStatus.class
 beep\engine\Main.class
 beep\engine\ride\invitation\RideImpl.class
 beep\engine\execution\RideExecution.class
+beep\engine\location\LocationImpl.class

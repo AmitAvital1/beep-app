@@ -3,6 +3,8 @@ package beep.app.data.entities;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -29,6 +31,12 @@ public class UserEntity {
 
     @Column(name="phone_number")
     private String phoneNumber;
+
+    @OneToMany(mappedBy = "sender", cascade = {CascadeType.PERSIST,CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH}, fetch = FetchType.LAZY)
+    private List<RideInvitationEntity> sentInvitations;
+
+    @OneToMany(mappedBy = "receiver", cascade = {CascadeType.PERSIST,CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH}, fetch = FetchType.LAZY)
+    private List<RideInvitationEntity> receivedInvitations;
 
     public UserEntity(){
 
@@ -90,5 +98,32 @@ public class UserEntity {
 
     public void setPhoneAreaCode(String phoneAreaCode) {
         this.phoneAreaCode = phoneAreaCode;
+    }
+
+    public void addSentInvitation(RideInvitationEntity invitation){
+        if(sentInvitations == null)
+            sentInvitations = new ArrayList<>();
+        sentInvitations.add(invitation);
+    }
+    public void addReceiveInvitation(RideInvitationEntity invitation){
+        if(receivedInvitations == null)
+            receivedInvitations = new ArrayList<>();
+        receivedInvitations.add(invitation);
+    }
+
+    public List<RideInvitationEntity> getSentInvitations() {
+        return sentInvitations;
+    }
+
+    public void setSentInvitations(List<RideInvitationEntity> sentInvitations) {
+        this.sentInvitations = sentInvitations;
+    }
+
+    public List<RideInvitationEntity> getReceivedInvitations() {
+        return receivedInvitations;
+    }
+
+    public void setReceivedInvitations(List<RideInvitationEntity> receivedInvitations) {
+        this.receivedInvitations = receivedInvitations;
     }
 }

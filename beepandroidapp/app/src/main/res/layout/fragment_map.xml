@@ -7,11 +7,14 @@
     tools:context=".MapFragment">
 
     <!-- Map fragment container -->
-    <FrameLayout
+    <fragment
         android:id="@+id/mapContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_weight="1"/>
+        android:layout_weight="1"
+        android:name="com.google.android.gms.maps.SupportMapFragment"/>
+
+
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

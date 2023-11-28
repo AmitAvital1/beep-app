@@ -2,12 +2,14 @@ package beep.app.controller;
 
 import beep.app.constants.Constants;
 import beep.app.data.dao.UserRepository;
+import beep.app.data.entities.RideInvitationEntity;
 import beep.app.data.entities.UserEntity;
 import beep.app.service.LoginCodeService;
 import beep.app.utils.SessionUtils;
 import beep.engine.ride.invitation.RideInvitation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import location.LocationDTO;
 import login.UserDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -31,18 +33,27 @@ public class RideInvitationController {
     }
 
     @PutMapping("/invite-beep/{phone}")
-    public ResponseEntity<?> register(@PathVariable String phone, HttpServletRequest request){
+    public ResponseEntity<?> register(@PathVariable String phone, HttpServletRequest request, @RequestBody LocationDTO locationDTO ){
         String userIdFromSession = SessionUtils.getUserId(request);
-        String cleanedNumber = cleanPhoneNumber(phone);
+        String cleanedPhoneNumber = cleanPhoneNumber(phone);
         if (userIdFromSession == null) {
             return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED).body("Error user not authorized");
         }else{
-            Optional<UserEntity> userEntityOptional = userRepository.findById(UUID.fromString(userIdFromSession));
-            if(!userEntityOptional.isPresent())
+            Optional<UserEntity> userSenderEntityOptional = userRepository.findById(UUID.fromString(userIdFromSession));
+            if(!userSenderEntityOptional.isPresent())
                 return ResponseEntity.status(HttpServletResponse.SC_BAD_GATEWAY).body("User not exist");
-            UserEntity userEntity = userEntityOptional.get();
-            //RideInvitation rideInvitation = new RideInvitation()
-            return ResponseEntity.ok().body(userEntity.getFirstName() + " " + userEntity.getLastName());
+            UserEntity userSenderEntity = userSenderEntityOptional.get();
+            UserEntity userReceiverEntity = userRepository.findByPhoneNumber(cleanedPhoneNumber);
+            if(userReceiverEntity == null)
+                return ResponseEntity.status(HttpServletResponse.SC_BAD_GATEWAY).body("Please invite to using beep!");
+            RideInvitationEntity newInvitation = new RideInvitationEntity(userSenderEntity,userReceiverEntity,locationDTO.getLatitude(),locationDTO.getLongitude());
+            userSenderEntity.addSentInvitation(newInvitation);
+            userReceiverEntity.addReceiveInvitation(newInvitation);
+
+            userRepository.save(userSenderEntity);
+            userRepository.save(userReceiverEntity);
+
+            return ResponseEntity.ok().body(userSenderEntity.getFirstName() + " " + userSenderEntity.getLastName());
         }
 
 

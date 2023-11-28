@@ -47,6 +47,7 @@ import java.util.Map;
 import beep.app.search.ContactItem;
 import beep.app.search.ContactItemAdapter;
 import beep.app.util.http.HttpClientUtil;
+import location.LocationDTO;
 import login.UserDTO;
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -335,10 +336,18 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
                 .build()
                 .toString();
 
-        RequestBody dummyRequestBody = RequestBody.create("", MediaType.parse("application/json"));
+        Gson gson = new Gson();
+        LocationDTO locationDTO;
+        if(mapFragment.getCurrentLocation() != null)
+            locationDTO = new LocationDTO(null, mapFragment.getCurrentLocation().getLatitude(),mapFragment.getCurrentLocation().getLongitude());
+        else
+            locationDTO = new LocationDTO(null, null,null);
+        String json = gson.toJson(locationDTO);
+
+        RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
         Request request = new Request.Builder()
                 .url(finalUrl + item.getPhoneNumber())
-                .put(dummyRequestBody)
+                .put(requestBody)
                 .build();
         HttpClientUtil.runAsync(request, new Callback() {
 

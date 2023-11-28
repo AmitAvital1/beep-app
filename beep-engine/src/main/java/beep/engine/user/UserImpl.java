@@ -16,8 +16,8 @@ public class UserImpl implements User{
     private String phoneNumber;
     private List<String> favoriteLocations = null;
 
-    private final List<RideInvitation> sentInvitations = new ArrayList<>();
-    private final List<RideInvitation> receivedInvitations = new ArrayList<>();
+    private List<RideInvitation> sentInvitations = new ArrayList<>();
+    private List<RideInvitation> receivedInvitations = new ArrayList<>();
 
     public UserImpl(UUID userID, String firstName, String lastName, String phoneAreaCode, String phoneNumber){
         this.userID = userID;
@@ -25,6 +25,16 @@ public class UserImpl implements User{
         this.lastName = lastName;
         this.phoneAreaCode = phoneAreaCode;
         this.phoneNumber = phoneNumber;
+    }
+
+    public UserImpl(UUID userID, String firstName, String lastName, String phoneAreaCode, String phoneNumber, List<RideInvitation> sentInvitations, List<RideInvitation> receivedInvitations) {
+        this.userID = userID;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.phoneAreaCode = phoneAreaCode;
+        this.phoneNumber = phoneNumber;
+        this.sentInvitations = sentInvitations;
+        this.receivedInvitations = receivedInvitations;
     }
 
     @Override
