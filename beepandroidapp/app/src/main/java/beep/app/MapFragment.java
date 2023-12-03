@@ -1,29 +1,23 @@
 package beep.app;
 
-import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
-import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
-
+import static beep.app.util.Constants.ACCEPT_INVITATION;
 import static beep.app.util.Constants.FETCH_ON_RIDE;
-import static beep.app.util.Constants.LOGIN;
+import static beep.app.util.Constants.RECEIVER_ON_RIDE;
+import static beep.app.util.Constants.SENDER_ON_RIDE;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Dialog;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.location.Location;
 import android.os.Bundle;
 
-import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
-import androidx.fragment.app.FragmentActivity;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -33,7 +27,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -46,13 +39,8 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.Marker;
-import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
 import com.google.gson.Gson;
 
 import org.jetbrains.annotations.NotNull;
@@ -61,7 +49,7 @@ import java.io.IOException;
 
 import beep.app.util.http.HttpClientUtil;
 import fetch.UserOnRideDTO;
-import login.UserDTO;
+import location.LocationDTO;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.HttpUrl;
@@ -103,12 +91,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             });
 
 
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_map, container, false);
         // FrameLayout mapContainer = rootView.findViewById(R.id.mapContainer);
-       // mapContainer.addView(super.onCreateView(inflater, container, savedInstanceState));
+        // mapContainer.addView(super.onCreateView(inflater, container, savedInstanceState));
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getContext());
         SupportMapFragment supportMapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.mapContainer);
         supportMapFragment.getMapAsync(this);
@@ -133,6 +120,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         mMap.setPadding(0, 200, 0, 0);
         requestPermissions();
     }
+
     private void requestPermissions() {
         String[] permissions = {Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION};
         if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
@@ -144,8 +132,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             requestPermissionLauncher.launch(permissions);
         }
     }
+
     @SuppressLint("MissingPermission")
-    public void getLastLocation(){
+    public void getLastLocation() {
         mMap.setMyLocationEnabled(true);
         fusedLocationProviderClient.requestLocationUpdates(
                 new LocationRequest()
@@ -156,13 +145,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     public void onLocationResult(LocationResult locationResult) {
                         currentLocation = locationResult.getLastLocation();
                         if (currentLocation != null) {
-                            LatLng myLocation = new LatLng(currentLocation.getLatitude(),currentLocation.getLongitude());
-                            if(firstFetch) {
+                            LatLng myLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+                            if (firstFetch) {
                                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 50));
                                 prevCameraPosition = mMap.getCameraPosition();
                                 firstFetch = false;
-                            }else{
-                                if(prevCameraPosition.equals(mMap.getCameraPosition())){
+                            } else {
+                                if (prevCameraPosition.equals(mMap.getCameraPosition())) {
                                     mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 50));
                                     prevCameraPosition = mMap.getCameraPosition();
                                 }
@@ -181,6 +170,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             return true; // Indicates that the listener has consumed the event
         });
     }
+
     public Location getCurrentLocation() {
         return currentLocation;
     }
@@ -188,6 +178,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private void startDataFetch() {
         handler.postDelayed(dataFetchRunnable, FETCH_INTERVAL);
     }
+
     private void fetchDataFromServer() {
         String finalUrl = HttpUrl
                 .parse(FETCH_ON_RIDE)
@@ -205,6 +196,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
 
             }
+
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 String responseBody = response.body().string();
@@ -214,14 +206,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     public void run() {
                         Gson gson = new Gson();
                         UserOnRideDTO userOnRideDTO = gson.fromJson(responseBody, UserOnRideDTO.class);
-                        if(userOnRideDTO.isOnRide()){
-                            if(userOnRideDTO.isSender()){
-                                showDialog("Invitation sent to " + userOnRideDTO.getRideDTO().getUserReceiver().getFirstName()
-                                        + userOnRideDTO.getRideDTO().getUserReceiver().getLastName() + "Waiting for approval", true, userOnRideDTO);
-                            }else{
-                                if(dialog == null)
-                                    showDialog("You have new invitation from " + userOnRideDTO.getRideDTO().getUserSender().getFirstName()
-                                         + userOnRideDTO.getRideDTO().getUserSender().getLastName(), false, userOnRideDTO);
+                        if (userOnRideDTO.isOnRide()) {
+                            if ((dialog == null) && userOnRideDTO.getRideDTO().getInvitationStatus().equals("PENDING"))
+                                callInvitationDialog(userOnRideDTO);
+                            else if (userOnRideDTO.getRideDTO().getInvitationStatus().equals("ACCEPTED")) {
+                                setOnRideUi(userOnRideDTO);
                             }
                         }
                     }
@@ -230,21 +219,53 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
+    private void setOnRideUi(UserOnRideDTO userOnRideDTO) {
+        handler.removeCallbacks(dataFetchRunnable);
+        if (dialog != null) {
+            dialog.dismiss();
+            dialog = null;
+        }
+        dataFetchRunnable = new Runnable() {
+            @Override
+            public void run() {
+                // Fetch data from the server
+                onRideApi(userOnRideDTO.getRideDTO().getRideID(), userOnRideDTO.isSender());
+
+                // Schedule the next fetch after the interval
+                handler.postDelayed(this, FETCH_INTERVAL);
+            }
+        };
+        startDataFetch();
+    }
+
+    private void callInvitationDialog(UserOnRideDTO userOnRideDTO) {
+        if (userOnRideDTO.isSender()) {
+            showInvitationRideDialog("Invitation sent to " + userOnRideDTO.getRideDTO().getUserReceiver().getFirstName()
+                    + userOnRideDTO.getRideDTO().getUserReceiver().getLastName() + "Waiting for approval", true, userOnRideDTO);
+        } else {
+            showInvitationRideDialog("You have new invitation from " + userOnRideDTO.getRideDTO().getUserSender().getFirstName()
+                    + userOnRideDTO.getRideDTO().getUserSender().getLastName(), false, userOnRideDTO);
+        }
+    }
+
     @Override
     public void onDestroy() {
         handler.removeCallbacks(dataFetchRunnable);
-        if(dialog != null) {
+        if (dialog != null) {
             dialog.dismiss();
             dialog = null;
         }
         super.onDestroy();
 
     }
-    private void showDialog(String text, boolean isSender,UserOnRideDTO userOnRideDTO ) {
+
+    private void showInvitationRideDialog(String text, boolean isSender, UserOnRideDTO userOnRideDTO) {
 
         dialog = new Dialog(requireContext());
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.bottom_invitation_dialog);
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.setCancelable(false);
 
         Button acceptButton = dialog.findViewById(R.id.acceptButton);
         Button rejectButton = dialog.findViewById(R.id.rejectButton);
@@ -252,7 +273,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         textView.setText(text);
 
-        if(isSender) {
+        if (isSender) {
             acceptButton.setVisibility(View.INVISIBLE);
             rejectButton.setVisibility(View.INVISIBLE);
         }
@@ -260,8 +281,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(View v) {
 
-                dialog.dismiss();
-                Toast.makeText(requireContext(),"Edit is Clicked",Toast.LENGTH_SHORT).show();
+                acceptInvitation(userOnRideDTO);
+                Toast.makeText(requireContext(), "Edit is Clicked", Toast.LENGTH_SHORT).show();
 
             }
         });
@@ -271,15 +292,112 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             public void onClick(View v) {
 
                 dialog.dismiss();
-                Toast.makeText(requireContext(),"Share is Clicked",Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Share is Clicked", Toast.LENGTH_SHORT).show();
 
             }
         });
 
 
+        dialog.show();
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialog.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
+        dialog.getWindow().setGravity(Gravity.BOTTOM);
+
+    }
+
+    private void acceptInvitation(UserOnRideDTO userOnRideDTO) {
+        String finalUrl = HttpUrl
+                .parse(ACCEPT_INVITATION + userOnRideDTO.getRideDTO().getInvitationID())
+                .newBuilder()
+                .build()
+                .toString();
+
+        Gson gson = new Gson();
+        String json = gson.toJson(new LocationDTO(null, getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude()));
+        RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+                .url(finalUrl)
+                .post(requestBody)
+                .build();
+
+        HttpClientUtil.runAsync(request, new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+
+            }
+        });
+    }
+
+    private void onRideApi(String rideID, boolean sender) {
+        String finalUrl;
+        if (sender) {
+            finalUrl = HttpUrl
+                    .parse(SENDER_ON_RIDE + rideID)
+                    .newBuilder()
+                    .build()
+                    .toString();
+        } else {
+            finalUrl = HttpUrl
+                    .parse(RECEIVER_ON_RIDE + rideID)
+                    .newBuilder()
+                    .build()
+                    .toString();
+        }
+
+        Gson gson = new Gson();
+        String json = gson.toJson(new LocationDTO(null, getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude()));
+        RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+                .url(finalUrl)
+                .post(requestBody)
+                .build();
+
+        HttpClientUtil.runAsync(request, new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        UserOnRideDTO userOnRideDTO = null;//gson.fromJson(responseBody, UserOnRideDTO.class);
+                        if (true) {
+                            if ((dialog == null))
+                                createRideDialog(userOnRideDTO, sender);
+                            else {
+                                //updateRideDialog(userOnRideDTO);
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    private void createRideDialog(UserOnRideDTO userOnRideDTO, boolean sender) {
+        dialog = new Dialog(requireContext());
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(R.layout.bottom_on_ride_dialog);
+        //dialog.setCanceledOnTouchOutside(false);
+
+        TextView textView = dialog.findViewById(R.id.ride_text);
+
+        textView.setText("Your ride has been started");
 
         dialog.show();
-        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         dialog.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
         dialog.getWindow().setGravity(Gravity.BOTTOM);

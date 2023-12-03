@@ -41,6 +41,10 @@ public class RideInvitationEntity {
     @Column(name="invitation_status")
     private String invitationStatus;
 
+    @OneToOne(cascade = {CascadeType.PERSIST,CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH})
+    @JoinColumn(name = "ride_id")
+    private RideEntity rideEntity;
+
     public RideInvitationEntity() {
     }
 
@@ -117,5 +121,13 @@ public class RideInvitationEntity {
 
     public void setInvitationStatus(String invitationStatus) {
         this.invitationStatus = invitationStatus;
+    }
+
+    public RideEntity getRideEntity() {
+        return rideEntity;
+    }
+
+    public void setRideEntity(RideEntity rideEntity) {
+        this.rideEntity = rideEntity;
     }
 }

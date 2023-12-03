@@ -5,7 +5,7 @@ import beep.engine.user.User;
 public interface Ride {
     int getID();
     User getUserTarget();
-    void executeRide();
+    void executeRide(Double senderLatitude, Double senderLongitude,Double receiverLatitude, Double receiverLongitude);
     //Ride status
     //
 }

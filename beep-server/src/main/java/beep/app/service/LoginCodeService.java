@@ -16,7 +16,7 @@ public class LoginCodeService {
 
     public Integer generateVerificationCode() {
         // Implement code generation logic (e.g., random 4-digit code)
-        return new Random().nextInt(10000);
+        return new Random().nextInt(1000,9999);
     }
 
     public void saveLoginCode(LoginCode loginCode){

@@ -58,6 +58,9 @@ public class FetchDataController {
 
                 RideDTO rideDTO = new RideDTO(rideInvitationEntity.getInvitationID().toString(),senderDTO,receiverDTO,rideInvitationEntity.getDateTime().toString(),new LocationDTO(null,rideInvitationEntity.getSourceLatitude(),rideInvitationEntity.getSourceLongitude()),null,rideInvitationEntity.getInvitationStatus());
 
+                if(rideInvitationEntity.getRideEntity() != null)
+                    rideDTO.setRideID(rideInvitationEntity.getRideEntity().getRideID().toString());
+
                 userOnRideDTO.setRideDTO(rideDTO);
             }
             return ResponseEntity.ok().body(userOnRideDTO);

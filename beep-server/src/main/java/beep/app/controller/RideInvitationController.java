@@ -1,11 +1,14 @@
 package beep.app.controller;
 
 import beep.app.constants.Constants;
+import beep.app.data.dao.RideInvitationRepository;
 import beep.app.data.dao.UserRepository;
+import beep.app.data.entities.RideEntity;
 import beep.app.data.entities.RideInvitationEntity;
 import beep.app.data.entities.UserEntity;
 import beep.app.service.LoginCodeService;
 import beep.app.utils.SessionUtils;
+import beep.engine.ride.invitation.InvitationStatus;
 import beep.engine.ride.invitation.RideInvitation;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,10 +16,7 @@ import location.LocationDTO;
 import login.UserDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -26,14 +26,16 @@ import static beep.app.controller.SearchController.cleanPhoneNumber;
 @RestController
 public class RideInvitationController {
     private UserRepository userRepository;
+    private RideInvitationRepository rideInvitationRepository;
 
     @Autowired
-    public RideInvitationController(UserRepository userRepository){
+    public RideInvitationController(UserRepository userRepository,RideInvitationRepository rideInvitationRepository){
         this.userRepository = userRepository;
+        this.rideInvitationRepository = rideInvitationRepository;
     }
 
     @PutMapping("/invite-beep/{phone}")
-    public ResponseEntity<?> register(@PathVariable String phone, HttpServletRequest request, @RequestBody LocationDTO locationDTO ){
+    public ResponseEntity<?> createInvitation(@PathVariable String phone, HttpServletRequest request, @RequestBody LocationDTO locationDTO){
         String userIdFromSession = SessionUtils.getUserId(request);
         String cleanedPhoneNumber = cleanPhoneNumber(phone);
         if (userIdFromSession == null) {
@@ -62,7 +64,20 @@ public class RideInvitationController {
 
             return ResponseEntity.ok().body(userSenderEntity.getFirstName() + " " + userSenderEntity.getLastName());
         }
+    }
+    @PostMapping("/accept-invitation/{invitation_id}")
+    public ResponseEntity<?> acceptInvitation(@PathVariable String invitation_id, HttpServletRequest request, @RequestBody LocationDTO locationDTO ){
+        Optional<RideInvitationEntity> optionalRideInvitationEntity = rideInvitationRepository.findById(UUID.fromString(invitation_id));
+        RideInvitationEntity rideInvitationEntity = optionalRideInvitationEntity.get();
+        rideInvitationEntity.setInvitationStatus(InvitationStatus.ACCEPTED.toString());
+        RideEntity rideEntity = new RideEntity(rideInvitationEntity.getSender(),rideInvitationEntity.getReceiver());
+        rideEntity.setSenderCurrentLatitude(rideInvitationEntity.getSourceLatitude());
+        rideEntity.setSenderCurrentLongitude(rideInvitationEntity.getSourceLongitude());
+        rideEntity.setReceiverCurrentLatitude(locationDTO.getLatitude());
+        rideEntity.setReceiverCurrentLongitude(locationDTO.getLongitude());
+        rideInvitationEntity.setRideEntity(rideEntity);
 
-
+        rideInvitationRepository.save(rideInvitationEntity);
+        return ResponseEntity.ok().body("");
     }
 }

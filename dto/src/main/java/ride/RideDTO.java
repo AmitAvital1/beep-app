@@ -13,6 +13,7 @@ public class RideDTO {
     private LocationDTO senderLocation;
     private LocationDTO receiverLocation;
     private String invitationStatus;
+    private String rideID;
 
     public RideDTO() {
     }
@@ -82,5 +83,13 @@ public class RideDTO {
 
     public void setTime(String time) {
         this.time = time;
+    }
+
+    public String getRideID() {
+        return rideID;
+    }
+
+    public void setRideID(String rideID) {
+        this.rideID = rideID;
     }
 }
