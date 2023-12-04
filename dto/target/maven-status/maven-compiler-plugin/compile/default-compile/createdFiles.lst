@@ -1,6 +1,7 @@
 fetch\UserOnRideDTO.class
 location\LocationDTO.class
 login\UserDTO.class
-fetch\InvitationDetailsDTO.class
 ride\RideDTO.class
+ride\OnRideRefresherDTO.class
+fetch\InvitationDetailsDTO.class
 search\UserPhoneExistDTO.class

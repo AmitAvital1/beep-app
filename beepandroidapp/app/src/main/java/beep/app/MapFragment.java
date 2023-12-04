@@ -26,6 +26,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -57,6 +58,7 @@ import okhttp3.MediaType;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
+import ride.OnRideRefresherDTO;
 
 
 public class MapFragment extends Fragment implements OnMapReadyCallback {
@@ -64,6 +66,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private boolean firstFetch = true;
     private boolean recenterOnLocationChange = false;
     private Location currentLocation;
+    private Location lastLocation;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private CameraPosition prevCameraPosition;
     private static final long FETCH_INTERVAL = 4000; // 4 seconds
@@ -94,11 +97,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_map, container, false);
-        // FrameLayout mapContainer = rootView.findViewById(R.id.mapContainer);
-        // mapContainer.addView(super.onCreateView(inflater, container, savedInstanceState));
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getContext());
         SupportMapFragment supportMapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.mapContainer);
         supportMapFragment.getMapAsync(this);
+        firstFetch = true;
 
         dataFetchRunnable = new Runnable() {
             @Override
@@ -143,6 +145,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 new LocationCallback() {
                     @Override
                     public void onLocationResult(LocationResult locationResult) {
+                        lastLocation = currentLocation;
                         currentLocation = locationResult.getLastLocation();
                         if (currentLocation != null) {
                             LatLng myLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
@@ -229,7 +232,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void run() {
                 // Fetch data from the server
-                onRideApi(userOnRideDTO.getRideDTO().getRideID(), userOnRideDTO.isSender());
+                onRideApi(userOnRideDTO,userOnRideDTO.getRideDTO().getRideID(), userOnRideDTO.isSender());
 
                 // Schedule the next fetch after the interval
                 handler.postDelayed(this, FETCH_INTERVAL);
@@ -298,11 +301,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
 
 
-        dialog.show();
+        dialog.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
         dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         dialog.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
         dialog.getWindow().setGravity(Gravity.BOTTOM);
+        dialog.show();
+
 
     }
 
@@ -335,7 +340,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
-    private void onRideApi(String rideID, boolean sender) {
+    private void onRideApi(UserOnRideDTO userOnRideDTO, String rideID, boolean sender) {
         String finalUrl;
         if (sender) {
             finalUrl = HttpUrl
@@ -372,12 +377,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
-                        UserOnRideDTO userOnRideDTO = null;//gson.fromJson(responseBody, UserOnRideDTO.class);
+                        OnRideRefresherDTO rideRefresherDTO = gson.fromJson(responseBody, OnRideRefresherDTO.class);
                         if (true) {
                             if ((dialog == null))
-                                createRideDialog(userOnRideDTO, sender);
-                            else {
-                                //updateRideDialog(userOnRideDTO);
+                                    createRideDialog(rideRefresherDTO,userOnRideDTO, sender);
+                            else if(currentLocation != null && lastLocation != null){
+                                if(currentLocation.getLongitude() != lastLocation.getLongitude() || currentLocation.getLatitude() != lastLocation.getLatitude())
+                                    updateRideDialog(rideRefresherDTO);
                             }
                         }
                     }
@@ -386,21 +392,41 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
-    private void createRideDialog(UserOnRideDTO userOnRideDTO, boolean sender) {
+    private void updateRideDialog(OnRideRefresherDTO rideRefresherDTO) {
+        TextView duration = dialog.findViewById(R.id.durationText);
+        TextView distance = dialog.findViewById(R.id.distanceText);
+
+
+        duration.setText(rideRefresherDTO.getDurationTime());
+        distance.setText(rideRefresherDTO.getDistanceText());
+    }
+
+    private void createRideDialog(OnRideRefresherDTO rideRefresherDTO, UserOnRideDTO onRideDTO, boolean sender) {
         dialog = new Dialog(requireContext());
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.bottom_on_ride_dialog);
-        //dialog.setCanceledOnTouchOutside(false);
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.setCancelable(false);
 
-        TextView textView = dialog.findViewById(R.id.ride_text);
 
-        textView.setText("Your ride has been started");
+        TextView title = dialog.findViewById(R.id.ride_text);
+        if(sender)
+            title.setText("Beep to: " + onRideDTO.getRideDTO().getUserReceiver().getFirstName() + " " + onRideDTO.getRideDTO().getUserReceiver().getLastName());
+        else
+            title.setText(onRideDTO.getRideDTO().getUserSender().getFirstName() + " " + onRideDTO.getRideDTO().getUserSender().getLastName() + " on the way to you");
 
-        dialog.show();
+        TextView duration = dialog.findViewById(R.id.durationText);
+        TextView distance = dialog.findViewById(R.id.distanceText);
+
+        duration.setText(rideRefresherDTO.getDurationTime());
+        distance.setText(rideRefresherDTO.getDistanceText());
+
+        dialog.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
         dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         dialog.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
         dialog.getWindow().setGravity(Gravity.BOTTOM);
+        dialog.show();
 
     }
 }

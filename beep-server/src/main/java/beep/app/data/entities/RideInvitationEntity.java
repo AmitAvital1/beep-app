@@ -1,6 +1,5 @@
 package beep.app.data.entities;
 
-import beep.engine.location.Location;
 import beep.engine.ride.invitation.InvitationStatus;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
