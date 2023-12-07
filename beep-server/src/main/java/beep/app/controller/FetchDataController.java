@@ -1,6 +1,7 @@
 package beep.app.controller;
 
 import beep.app.data.dao.UserRepository;
+import beep.app.data.entities.RideEntity;
 import beep.app.data.entities.RideInvitationEntity;
 import beep.app.data.entities.UserEntity;
 import beep.app.utils.SessionUtils;
@@ -58,8 +59,11 @@ public class FetchDataController {
 
                 RideDTO rideDTO = new RideDTO(rideInvitationEntity.getInvitationID().toString(),senderDTO,receiverDTO,rideInvitationEntity.getDateTime().toString(),new LocationDTO(null,rideInvitationEntity.getSourceLatitude(),rideInvitationEntity.getSourceLongitude()),null,rideInvitationEntity.getInvitationStatus());
 
-                if(rideInvitationEntity.getRideEntity() != null)
-                    rideDTO.setRideID(rideInvitationEntity.getRideEntity().getRideID().toString());
+                if(rideInvitationEntity.getRideEntity() != null) {
+                    RideEntity iRideEntity = rideInvitationEntity.getRideEntity();
+                    rideDTO.setRideID(iRideEntity.getRideID().toString());
+                    rideDTO.setReceiverLocation(new LocationDTO(null, iRideEntity.getReceiverCurrentLatitude(),iRideEntity.getReceiverCurrentLongitude()));
+                }
 
                 userOnRideDTO.setRideDTO(rideDTO);
             }
