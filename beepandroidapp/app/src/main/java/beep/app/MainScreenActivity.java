@@ -117,9 +117,6 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         navigationView.setNavigationItemSelectedListener(this);
         navigationView.setCheckedItem(R.id.nav_home);
 
-        //Todo set timer to fetch user details
-
-
         getSupportActionBar().setDisplayShowTitleEnabled(false);
 
 
@@ -339,9 +336,9 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         Gson gson = new Gson();
         LocationDTO locationDTO;
         if(mapFragment.getCurrentLocation() != null)
-            locationDTO = new LocationDTO(null, mapFragment.getCurrentLocation().getLatitude(),mapFragment.getCurrentLocation().getLongitude());
+            locationDTO = new LocationDTO(null, mapFragment.getCurrentLocation().getLatitude(),mapFragment.getCurrentLocation().getLongitude(),mapFragment.getLastBearing());
         else
-            locationDTO = new LocationDTO(null, null,null);
+            locationDTO = new LocationDTO(null, null,null,null);
         String json = gson.toJson(locationDTO);
 
         RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));

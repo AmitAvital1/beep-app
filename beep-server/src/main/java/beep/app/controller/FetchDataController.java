@@ -31,7 +31,7 @@ public class FetchDataController {
     }
 
     @GetMapping("/on_ride_status")
-    public ResponseEntity<?> register(HttpServletRequest request){
+    public ResponseEntity<?> listenRideStatus(HttpServletRequest request){
         String userIdFromSession = SessionUtils.getUserId(request);
         if (userIdFromSession == null) {
             return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED).body("Error user not authorized");
@@ -57,12 +57,12 @@ public class FetchDataController {
                 UserDTO senderDTO = new UserDTO(sender.getUserId(),sender.getFirstName(),sender.getLastName(),sender.getPhoneAreaCode(),sender.getPhoneNumber());
                 UserDTO receiverDTO = new UserDTO(receiver.getUserId(),receiver.getFirstName(),receiver.getLastName(),receiver.getPhoneAreaCode(),receiver.getPhoneNumber());
 
-                RideDTO rideDTO = new RideDTO(rideInvitationEntity.getInvitationID().toString(),senderDTO,receiverDTO,rideInvitationEntity.getDateTime().toString(),new LocationDTO(null,rideInvitationEntity.getSourceLatitude(),rideInvitationEntity.getSourceLongitude()),null,rideInvitationEntity.getInvitationStatus());
+                RideDTO rideDTO = new RideDTO(rideInvitationEntity.getInvitationID().toString(),senderDTO,receiverDTO,rideInvitationEntity.getDateTime().toString(),new LocationDTO(null,rideInvitationEntity.getSourceLatitude(),rideInvitationEntity.getSourceLongitude(),Float.valueOf(0)),null,rideInvitationEntity.getInvitationStatus());
 
                 if(rideInvitationEntity.getRideEntity() != null) {
                     RideEntity iRideEntity = rideInvitationEntity.getRideEntity();
                     rideDTO.setRideID(iRideEntity.getRideID().toString());
-                    rideDTO.setReceiverLocation(new LocationDTO(null, iRideEntity.getReceiverCurrentLatitude(),iRideEntity.getReceiverCurrentLongitude()));
+                    rideDTO.setReceiverLocation(new LocationDTO(null, iRideEntity.getReceiverCurrentLatitude(),iRideEntity.getReceiverCurrentLongitude(),iRideEntity.getReceiverCurrentBearing()));
                 }
 
                 userOnRideDTO.setRideDTO(rideDTO);

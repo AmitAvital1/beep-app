@@ -75,7 +75,10 @@ public class RideInvitationController {
         rideEntity.setSenderCurrentLongitude(rideInvitationEntity.getSourceLongitude());
         rideEntity.setReceiverCurrentLatitude(locationDTO.getLatitude());
         rideEntity.setReceiverCurrentLongitude(locationDTO.getLongitude());
+        rideEntity.setSenderCurrentBearing(Float.valueOf(0));
+        rideEntity.setReceiverCurrentBearing(locationDTO.getBearing());
         rideInvitationEntity.setRideEntity(rideEntity);
+
 
         rideInvitationRepository.save(rideInvitationEntity);
         return ResponseEntity.ok().body("");

@@ -8,6 +8,7 @@ public class LocationImpl implements Location{
     private String locationName;
     private Double latitude;
     private Double longitude;
+    private Float bearing;
 
     public LocationImpl(String locationName, Double latitude, Double longitude) {
         this.locationName = locationName;
@@ -42,6 +43,16 @@ public class LocationImpl implements Location{
     @Override
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
+    }
+
+    @Override
+    public Float getBearing() {
+        return bearing;
+    }
+
+    @Override
+    public void setBearing(Float bearing) {
+        this.bearing = bearing;
     }
 
     @Override

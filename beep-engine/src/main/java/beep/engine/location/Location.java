@@ -8,6 +8,8 @@ public interface Location {
     void setLatitude(Double latitude);
     void setLongitude(Double longitude);
     boolean isLocationWithinRadius(Location otherLocation);
+    Float getBearing();
+    void setBearing(Float bearing);
 
 
 }

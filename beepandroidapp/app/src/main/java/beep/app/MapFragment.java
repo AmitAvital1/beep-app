@@ -30,6 +30,7 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.TextView;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -71,14 +72,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private boolean recenterOnLocationChange = false;
     private Location currentLocation;
     private Location lastLocation;
+    private float lastBearing = 0;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private CameraPosition prevCameraPosition;
     private static final long FETCH_INTERVAL = 4000; // 4 seconds
     private Handler handler = new Handler(Looper.myLooper());
     private Runnable dataFetchRunnable;
+    private Runnable onRideDataFetch;
     private Dialog dialog = null;
+    private Dialog dialogComplete = null;
     private Marker otherMarker = null;
-    private boolean showOtherOnMap = false;
+    private boolean showOtherFocusOnMap = false;
+    private ImageButton iconButton;
 
 
     private GoogleMap mMap;
@@ -94,7 +99,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 }
                 if (allPermissionsGranted) {
                     getLastLocation();
-                    startDataFetch();
+                    startDataFetch(dataFetchRunnable);
                 } else {
                     // Permission is denied, handle it
                 }
@@ -135,7 +140,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             getLastLocation();
-            startDataFetch();
+            startDataFetch(dataFetchRunnable);
         } else {
             // Request permissions
             requestPermissionLauncher.launch(permissions);
@@ -154,7 +159,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     public void onLocationResult(LocationResult locationResult) {
                         lastLocation = currentLocation;
                         currentLocation = locationResult.getLastLocation();
-                        if (currentLocation != null && !showOtherOnMap) {
+
+                        if(currentLocation != null && lastLocation != null) {
+                            lastBearing = lastLocation.bearingTo(currentLocation);
+                            System.out.println(lastBearing + " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11");
+                        }
+
+                        if (currentLocation != null && !showOtherFocusOnMap) {
                             LatLng myLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
                             if (firstFetch) {
                                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 50));
@@ -177,7 +188,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 50));
             }
             prevCameraPosition = mMap.getCameraPosition();
-            showOtherOnMap = false;
+            showOtherFocusOnMap = false;
             return true; // Indicates that the listener has consumed the event
         });
     }
@@ -186,8 +197,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return currentLocation;
     }
 
-    private void startDataFetch() {
-        handler.postDelayed(dataFetchRunnable, FETCH_INTERVAL);
+    public float getLastBearing() {
+        return lastBearing;
+    }
+
+    private void startDataFetch(Runnable runnable) {
+        handler.postDelayed(runnable, FETCH_INTERVAL);
     }
 
     private void fetchDataFromServer() {
@@ -222,7 +237,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                 callInvitationDialog(userOnRideDTO);
                             else if (userOnRideDTO.getRideDTO().getInvitationStatus().equals("ACCEPTED")) {
                                 setOnRideUi(userOnRideDTO);
-                                if(dialog == null)
+                                if(dialog == null && otherMarker == null)
                                     createSenderMarker(userOnRideDTO.isSender(),userOnRideDTO);
                             }
                         }
@@ -234,11 +249,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private void setOnRideUi(UserOnRideDTO userOnRideDTO) {
         handler.removeCallbacks(dataFetchRunnable);
-        if (dialog != null) {
-            dialog.dismiss();
-            dialog = null;
-        }
-        dataFetchRunnable = new Runnable() {
+        removeDialog(dialog);
+        removeCompleteDialog(dialogComplete);
+        onRideDataFetch = new Runnable() {
             @Override
             public void run() {
                 // Fetch data from the server
@@ -248,7 +261,21 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 handler.postDelayed(this, FETCH_INTERVAL);
             }
         };
-        startDataFetch();
+        startDataFetch(onRideDataFetch);
+    }
+
+    private void removeCompleteDialog(Dialog dialogComplete) {
+        if (dialogComplete != null) {
+            dialogComplete.dismiss();
+            this.dialogComplete = null;
+        }
+    }
+
+    private void removeDialog(Dialog dialog) {
+        if (dialog != null) {
+            dialog.dismiss();
+            this.dialog = null;
+        }
     }
 
     private void callInvitationDialog(UserOnRideDTO userOnRideDTO) {
@@ -264,18 +291,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public void onDestroy() {
         handler.removeCallbacks(dataFetchRunnable);
-        if (dialog != null) {
-            dialog.dismiss();
-            dialog = null;
-        }
+        removeDialog(dialog);
+        removeCompleteDialog(dialogComplete);
         otherMarker = null;
-        showOtherOnMap = false;
+        showOtherFocusOnMap = false;
         super.onDestroy();
 
     }
 
     private void showInvitationRideDialog(String text, boolean isSender, UserOnRideDTO userOnRideDTO) {
-
+        removeCompleteDialog(dialogComplete);
         dialog = new Dialog(requireContext());
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.bottom_invitation_dialog);
@@ -321,19 +346,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         createSenderMarker(isSender, userOnRideDTO);
 
-
     }
 
     private void createSenderMarker(boolean isSender, UserOnRideDTO userOnRideDTO) {
         if(!isSender){
             BitmapDrawable bitmap = (BitmapDrawable) getResources().getDrawable(R.drawable.car, getContext().getTheme());
             Bitmap b = bitmap.getBitmap();
-            Bitmap smallMarker = Bitmap.createScaledBitmap(b, 58, 58, false);
+            Bitmap smallMarker = Bitmap.createScaledBitmap(b, 78, 78, false);
 
             LatLng senderLatLng = new LatLng(userOnRideDTO.getRideDTO().getSenderLocation().getLatitude(), userOnRideDTO.getRideDTO().getSenderLocation().getLongitude());
-            otherMarker = mMap.addMarker(new MarkerOptions().position(senderLatLng).icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
-            showOtherOnMap = true;
+            otherMarker = mMap.addMarker(new MarkerOptions().position(senderLatLng).icon(BitmapDescriptorFactory.fromBitmap(smallMarker)).rotation(userOnRideDTO.getRideDTO().getSenderLocation().getBearing()));
+            showOtherFocusOnMap = true;
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(senderLatLng, 30));
+            prevCameraPosition = mMap.getCameraPosition();
         }
     }
 
@@ -345,7 +370,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 .toString();
 
         Gson gson = new Gson();
-        String json = gson.toJson(new LocationDTO(null, getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude()));
+        String json = gson.toJson(new LocationDTO(null, getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude(),lastBearing));
         RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
@@ -362,7 +387,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                showOtherOnMap = true;
+                showOtherFocusOnMap = true;
             }
         });
     }
@@ -396,7 +421,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         Gson gson = new Gson();
-        String json = gson.toJson(new LocationDTO(null, getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude()));
+        String json = gson.toJson(new LocationDTO(null, getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude(),lastBearing));
         RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
@@ -417,20 +442,56 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     @Override
                     public void run() {
                         OnRideRefresherDTO rideRefresherDTO = gson.fromJson(responseBody, OnRideRefresherDTO.class);
-                        if ((dialog == null)) {
-                            createRideDialog(rideRefresherDTO, userOnRideDTO, sender);
-                            if(sender)
-                                createReceiverMarker(rideRefresherDTO);
-                        }
-                        else {
-                            updateRideDialog(rideRefresherDTO);
-                            updateMapCameraToOtherAndMarker(rideRefresherDTO,sender);
-                        }
+                        if (rideRefresherDTO.getRideStatus().equals("ON_RIDE")) {
+                            if ((dialog == null)) {
+                                createRideDialog(rideRefresherDTO, userOnRideDTO, sender);
+                                if (sender)
+                                    createReceiverMarker(rideRefresherDTO);
+                            } else {
+                                updateRideDialog(rideRefresherDTO);
+                                updateMapCameraToOtherAndMarker(rideRefresherDTO, sender);
+                            }
 
+                        }else if(rideRefresherDTO.getRideStatus().equals("COMPLETED")){
+                            createRideCompleteDialog(rideRefresherDTO,sender,userOnRideDTO);
+                            handler.removeCallbacks(onRideDataFetch);
+                            startDataFetch(dataFetchRunnable);
+                        }
                     }
                 });
             }
         });
+    }
+
+    private void createRideCompleteDialog(OnRideRefresherDTO rideRefresherDTO, boolean sender, UserOnRideDTO userOnRideDTO) {
+        removeDialog(dialog);
+        dialogComplete = new Dialog(requireContext());
+        dialogComplete.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialogComplete.setContentView(R.layout.bottom_complete_ride_dialog);
+        dialogComplete.setCanceledOnTouchOutside(false);
+        dialogComplete.setCancelable(false);
+
+        Button okButton = dialogComplete.findViewById(R.id.okButton);
+        TextView textView = dialogComplete.findViewById(R.id.complete_text);
+        if(!sender)
+            textView.setText(userOnRideDTO.getRideDTO().getUserSender().getFirstName() + " " + userOnRideDTO.getRideDTO().getUserSender().getLastName() + " is arrived. Beep Completed");
+        else
+            textView.setText("You arrived to " + userOnRideDTO.getRideDTO().getUserReceiver().getFirstName() + " " +userOnRideDTO.getRideDTO().getUserReceiver().getLastName() + ". Beep Completed");
+        okButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                dialogComplete.dismiss();
+                dialogComplete = null;
+                otherMarker.remove();
+            }
+        });
+
+        dialogComplete.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+        dialogComplete.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialogComplete.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialogComplete.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
+        dialogComplete.getWindow().setGravity(Gravity.BOTTOM);
+        dialogComplete.show();
     }
 
     private void createReceiverMarker(OnRideRefresherDTO rideRefresherDTO) {
@@ -439,8 +500,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         Bitmap smallMarker = Bitmap.createScaledBitmap(b, 58, 58, false);
 
         LatLng recieverLatLng = new LatLng(rideRefresherDTO.getReceiverCurrentLocation().getLatitude(), rideRefresherDTO.getReceiverCurrentLocation().getLongitude());
-        otherMarker = mMap.addMarker(new MarkerOptions().position(recieverLatLng).icon(BitmapDescriptorFactory.fromBitmap(smallMarker)));
-        showOtherOnMap = true;
+        otherMarker = mMap.addMarker(new MarkerOptions().position(recieverLatLng).icon(BitmapDescriptorFactory.fromBitmap(smallMarker)).rotation(rideRefresherDTO.getReceiverCurrentLocation().getBearing()));
+        showOtherFocusOnMap = true;
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(recieverLatLng, 30));
     }
 
@@ -449,14 +510,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         LatLng recieverLatLng = new LatLng(rideRefresherDTO.getReceiverCurrentLocation().getLatitude(),rideRefresherDTO.getReceiverCurrentLocation().getLongitude());
         if(!sender){
             otherMarker.setPosition(senderLatLng);
-            if(showOtherOnMap && prevCameraPosition.equals(mMap.getCameraPosition())) {
+            otherMarker.setRotation(rideRefresherDTO.getSenderCurrentLocation().getBearing());
+            if(showOtherFocusOnMap && prevCameraPosition.equals(mMap.getCameraPosition())) {
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(senderLatLng, 30));
                 prevCameraPosition = mMap.getCameraPosition();
             }
         }
         else {
             otherMarker.setPosition(recieverLatLng);
-            if(showOtherOnMap && prevCameraPosition.equals(mMap.getCameraPosition())) {
+            otherMarker.setRotation(rideRefresherDTO.getReceiverCurrentLocation().getBearing());
+            if(showOtherFocusOnMap && prevCameraPosition.equals(mMap.getCameraPosition())) {
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(recieverLatLng, 30));
                 prevCameraPosition = mMap.getCameraPosition();
             }
@@ -479,6 +542,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         dialog.setCanceledOnTouchOutside(false);
         dialog.setCancelable(false);
 
+        iconButton = dialog.findViewById(R.id.showOtherIcon);
+
+        if(sender)
+            iconButton.setImageResource(R.drawable.blue_dot);
+
+        iconButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showOtherFocusOnMap = true;
+                prevCameraPosition = mMap.getCameraPosition();
+            }
+        });
+
 
         TextView title = dialog.findViewById(R.id.ride_text);
         if (sender)
@@ -500,4 +576,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         dialog.show();
 
     }
+
+
 }
