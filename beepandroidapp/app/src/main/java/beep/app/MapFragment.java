@@ -3,6 +3,7 @@ package beep.app;
 import static beep.app.util.Constants.ACCEPT_INVITATION;
 import static beep.app.util.Constants.FETCH_ON_RIDE;
 import static beep.app.util.Constants.RECEIVER_ON_RIDE;
+import static beep.app.util.Constants.REJECT_INVITATION;
 import static beep.app.util.Constants.SENDER_ON_RIDE;
 
 import android.Manifest;
@@ -162,7 +163,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
                         if(currentLocation != null && lastLocation != null) {
                             lastBearing = lastLocation.bearingTo(currentLocation);
-                            System.out.println(lastBearing + " !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!11");
                         }
 
                         if (currentLocation != null && !showOtherFocusOnMap) {
@@ -232,7 +232,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     public void run() {
                         Gson gson = new Gson();
                         UserOnRideDTO userOnRideDTO = gson.fromJson(responseBody, UserOnRideDTO.class);
-                        if (userOnRideDTO.isOnRide()) {
+                        if (userOnRideDTO.isOnRide()) {//On ride mean have invitation or on ride
                             if ((dialog == null) && userOnRideDTO.getRideDTO().getInvitationStatus().equals("PENDING"))
                                 callInvitationDialog(userOnRideDTO);
                             else if (userOnRideDTO.getRideDTO().getInvitationStatus().equals("ACCEPTED")) {
@@ -240,6 +240,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                 if(dialog == null && otherMarker == null)
                                     createSenderMarker(userOnRideDTO.isSender(),userOnRideDTO);
                             }
+                        }else{
+                            removeDialog(dialog);
+                            if(otherMarker != null)
+                                otherMarker.remove();
                         }
                     }
                 });
@@ -317,6 +321,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             acceptButton.setVisibility(View.INVISIBLE);
             rejectButton.setVisibility(View.INVISIBLE);
         }
+
+        dialog.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialog.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
+        dialog.getWindow().setGravity(Gravity.BOTTOM);
+        dialog.show();
+
+        createSenderMarker(isSender, userOnRideDTO);
+
         acceptButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -329,22 +343,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         rejectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                rejectInvitation(userOnRideDTO);
                 dialog.dismiss();
-                //Toast.makeText(requireContext(), "Share is Clicked", Toast.LENGTH_SHORT).show();
-
             }
         });
-
-
-        dialog.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
-        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        dialog.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
-        dialog.getWindow().setGravity(Gravity.BOTTOM);
-        dialog.show();
-
-        createSenderMarker(isSender, userOnRideDTO);
 
     }
 
@@ -388,6 +390,33 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 showOtherFocusOnMap = true;
+            }
+        });
+    }
+    private void rejectInvitation(UserOnRideDTO userOnRideDTO) {
+        String finalUrl = HttpUrl
+                .parse(REJECT_INVITATION + userOnRideDTO.getRideDTO().getInvitationID())
+                .newBuilder()
+                .build()
+                .toString();
+
+        RequestBody requestBody = RequestBody.create("", MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+                .url(finalUrl)
+                .post(requestBody)
+                .build();
+
+
+        HttpClientUtil.runAsync(request, new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+
             }
         });
     }

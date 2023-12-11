@@ -83,4 +83,12 @@ public class RideInvitationController {
         rideInvitationRepository.save(rideInvitationEntity);
         return ResponseEntity.ok().body("");
     }
+    @PostMapping("/reject-invitation/{invitation_id}")
+    public ResponseEntity<?> acceptInvitation(@PathVariable String invitation_id, HttpServletRequest request){
+        Optional<RideInvitationEntity> optionalRideInvitationEntity = rideInvitationRepository.findById(UUID.fromString(invitation_id));
+        RideInvitationEntity rideInvitationEntity = optionalRideInvitationEntity.get();
+        rideInvitationEntity.rejectInvitation();
+        rideInvitationRepository.save(rideInvitationEntity);
+        return ResponseEntity.ok().body("");
+    }
 }

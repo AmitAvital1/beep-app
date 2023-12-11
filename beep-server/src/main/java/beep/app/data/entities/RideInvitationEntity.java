@@ -1,8 +1,10 @@
 package beep.app.data.entities;
 
+import beep.engine.ride.RideStatus;
 import beep.engine.ride.invitation.InvitationStatus;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -128,5 +130,14 @@ public class RideInvitationEntity {
 
     public void setRideEntity(RideEntity rideEntity) {
         this.rideEntity = rideEntity;
+    }
+
+    @Transactional
+    public void rejectInvitation(){
+        invitationStatus = InvitationStatus.REJECTED.toString();
+        UserEntity invitationSender = this.getSender();
+        UserEntity invitationReceiver = this.getReceiver();
+        invitationSender.setOnRide(null);
+        invitationReceiver.setOnRide(null);
     }
 }

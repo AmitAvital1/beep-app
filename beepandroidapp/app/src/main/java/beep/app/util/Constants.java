@@ -14,6 +14,7 @@ public class Constants {
     public final static String INVITE = FULL_SERVER_PATH + "/invite-beep/";
     public final static String FETCH_ON_RIDE = FULL_SERVER_PATH + "/on_ride_status";
     public final static String ACCEPT_INVITATION = FULL_SERVER_PATH + "/accept-invitation/";
+    public final static String REJECT_INVITATION = FULL_SERVER_PATH + "/reject-invitation/";
     public final static String SENDER_ON_RIDE = FULL_SERVER_PATH + "/sender-ride/";
     public final static String RECEIVER_ON_RIDE = FULL_SERVER_PATH + "/receiver-ride/";
 }
