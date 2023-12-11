@@ -1,6 +1,8 @@
 package beep.app;
 
 import static beep.app.util.Constants.ACCEPT_INVITATION;
+import static beep.app.util.Constants.CANCEL_INVITATION;
+import static beep.app.util.Constants.CANCEL_RIDE;
 import static beep.app.util.Constants.FETCH_ON_RIDE;
 import static beep.app.util.Constants.RECEIVER_ON_RIDE;
 import static beep.app.util.Constants.REJECT_INVITATION;
@@ -48,6 +50,7 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.Task;
 import com.google.gson.Gson;
 
 import org.jetbrains.annotations.NotNull;
@@ -76,7 +79,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private float lastBearing = 0;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private CameraPosition prevCameraPosition;
-    private static final long FETCH_INTERVAL = 4000; // 4 seconds
+    private static final long FETCH_IF_HAS_RIDE = 4000; // 4 seconds
+    private static final long FETCH_IN_RIDE = 300; // 300ms
     private Handler handler = new Handler(Looper.myLooper());
     private Runnable dataFetchRunnable;
     private Runnable onRideDataFetch;
@@ -84,7 +88,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private Dialog dialogComplete = null;
     private Marker otherMarker = null;
     private boolean showOtherFocusOnMap = false;
-    private ImageButton iconButton;
+    private ImageButton focusOnOtherButton;
+    private LocationCallback currentLocationCallback;
 
 
     private GoogleMap mMap;
@@ -100,7 +105,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 }
                 if (allPermissionsGranted) {
                     getLastLocation();
-                    startDataFetch(dataFetchRunnable);
+                    startDataFetch(dataFetchRunnable,FETCH_IF_HAS_RIDE);
                 } else {
                     // Permission is denied, handle it
                 }
@@ -122,7 +127,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 fetchDataFromServer();
 
                 // Schedule the next fetch after the interval
-                handler.postDelayed(this, FETCH_INTERVAL);
+                handler.postDelayed(this, FETCH_IF_HAS_RIDE);
             }
         };
 
@@ -141,7 +146,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             getLastLocation();
-            startDataFetch(dataFetchRunnable);
+            startDataFetch(dataFetchRunnable, FETCH_IF_HAS_RIDE);
         } else {
             // Request permissions
             requestPermissionLauncher.launch(permissions);
@@ -151,35 +156,38 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @SuppressLint("MissingPermission")
     public void getLastLocation() {
         mMap.setMyLocationEnabled(true);
+        currentLocationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                lastLocation = currentLocation;
+                currentLocation = locationResult.getLastLocation();
+
+                if (currentLocation != null && lastLocation != null) {
+                    lastBearing = lastLocation.bearingTo(currentLocation);
+                    System.out.println(lastBearing);
+                }
+
+                if (currentLocation != null && !showOtherFocusOnMap) {
+                    LatLng myLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+                    if (firstFetch) {
+                        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 50));
+                        prevCameraPosition = mMap.getCameraPosition();
+                        firstFetch = false;
+                    } else {
+                        if (prevCameraPosition.equals(mMap.getCameraPosition())) {
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 50));
+                            prevCameraPosition = mMap.getCameraPosition();
+                        }
+                    }
+                }
+            }
+        };
         fusedLocationProviderClient.requestLocationUpdates(
                 new LocationRequest()
                         .setInterval(1000) // Update every second
                         .setFastestInterval(500), // Update as often as possible
-                new LocationCallback() {
-                    @Override
-                    public void onLocationResult(LocationResult locationResult) {
-                        lastLocation = currentLocation;
-                        currentLocation = locationResult.getLastLocation();
-
-                        if(currentLocation != null && lastLocation != null) {
-                            lastBearing = lastLocation.bearingTo(currentLocation);
-                        }
-
-                        if (currentLocation != null && !showOtherFocusOnMap) {
-                            LatLng myLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
-                            if (firstFetch) {
-                                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 50));
-                                prevCameraPosition = mMap.getCameraPosition();
-                                firstFetch = false;
-                            } else {
-                                if (prevCameraPosition.equals(mMap.getCameraPosition())) {
-                                    mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 50));
-                                    prevCameraPosition = mMap.getCameraPosition();
-                                }
-                            }
-                        }
-                    }
-                }, Looper.myLooper()
+                currentLocationCallback
+                , Looper.myLooper()
         );
         // Set a click listener for the "My Location" button
         mMap.setOnMyLocationButtonClickListener(() -> {
@@ -201,8 +209,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         return lastBearing;
     }
 
-    private void startDataFetch(Runnable runnable) {
-        handler.postDelayed(runnable, FETCH_INTERVAL);
+    private void startDataFetch(Runnable runnable, long fetchTime) {
+        handler.postDelayed(runnable, fetchTime);
     }
 
     private void fetchDataFromServer() {
@@ -262,10 +270,10 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 onRideApi(userOnRideDTO, userOnRideDTO.getRideDTO().getRideID(), userOnRideDTO.isSender());
 
                 // Schedule the next fetch after the interval
-                handler.postDelayed(this, FETCH_INTERVAL);
+                handler.postDelayed(this, FETCH_IN_RIDE);
             }
         };
-        startDataFetch(onRideDataFetch);
+        startDataFetch(onRideDataFetch,FETCH_IN_RIDE);
     }
 
     private void removeCompleteDialog(Dialog dialogComplete) {
@@ -285,7 +293,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private void callInvitationDialog(UserOnRideDTO userOnRideDTO) {
         if (userOnRideDTO.isSender()) {
             showInvitationRideDialog("Invitation sent to " + userOnRideDTO.getRideDTO().getUserReceiver().getFirstName() + " "
-                    + userOnRideDTO.getRideDTO().getUserReceiver().getLastName() + "Waiting for approval", true, userOnRideDTO);
+                    + userOnRideDTO.getRideDTO().getUserReceiver().getLastName() + " Waiting for approval", true, userOnRideDTO);
         } else {
             showInvitationRideDialog("You have new invitation from " + userOnRideDTO.getRideDTO().getUserSender().getFirstName() + " "
                     + userOnRideDTO.getRideDTO().getUserSender().getLastName(), false, userOnRideDTO);
@@ -299,6 +307,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         removeCompleteDialog(dialogComplete);
         otherMarker = null;
         showOtherFocusOnMap = false;
+        fusedLocationProviderClient.removeLocationUpdates(currentLocationCallback);
         super.onDestroy();
 
     }
@@ -314,12 +323,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         Button acceptButton = dialog.findViewById(R.id.acceptButton);
         Button rejectButton = dialog.findViewById(R.id.rejectButton);
         TextView textView = dialog.findViewById(R.id.invitation_text);
+        ImageButton cancelInvitation = dialog.findViewById(R.id.cancelInvitation);
 
         textView.setText(text);
 
         if (isSender) {
             acceptButton.setVisibility(View.INVISIBLE);
             rejectButton.setVisibility(View.INVISIBLE);
+        }else{
+            cancelInvitation.setVisibility(View.INVISIBLE);
         }
 
         dialog.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
@@ -344,7 +356,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(View v) {
                 rejectInvitation(userOnRideDTO);
-                dialog.dismiss();
+                removeDialog(dialog);
+                if(otherMarker != null)
+                    otherMarker.remove();
+                showOtherFocusOnMap = false;
+            }
+        });
+        cancelInvitation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                cancelInvitation(userOnRideDTO);
+                removeDialog(dialog);
+                if(otherMarker != null)
+                    otherMarker.remove();
+                showOtherFocusOnMap = false;
             }
         });
 
@@ -389,7 +414,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                showOtherFocusOnMap = true;
+                if(response.code() == 408){
+                    //Request timeout - canceled by the sender.
+                }else{
+                    showOtherFocusOnMap = true;
+                }
             }
         });
     }
@@ -416,7 +445,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                if(response.code() == 408){
+                    //Request timeout - canceled by the sender.
+                }else{
 
+                }
             }
         });
     }
@@ -482,9 +515,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             }
 
                         }else if(rideRefresherDTO.getRideStatus().equals("COMPLETED")){
-                            createRideCompleteDialog(rideRefresherDTO,sender,userOnRideDTO);
                             handler.removeCallbacks(onRideDataFetch);
-                            startDataFetch(dataFetchRunnable);
+                            createRideCompleteDialog(rideRefresherDTO,sender,userOnRideDTO,false);
+                            startDataFetch(dataFetchRunnable,FETCH_IF_HAS_RIDE);
+                        }
+                        else if(rideRefresherDTO.getRideStatus().equals("CANCELED")){
+                            handler.removeCallbacks(onRideDataFetch);
+                            createRideCompleteDialog(rideRefresherDTO,sender,userOnRideDTO,true);
+                            startDataFetch(dataFetchRunnable,FETCH_IF_HAS_RIDE);
                         }
                     }
                 });
@@ -492,7 +530,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         });
     }
 
-    private void createRideCompleteDialog(OnRideRefresherDTO rideRefresherDTO, boolean sender, UserOnRideDTO userOnRideDTO) {
+    private void createRideCompleteDialog(OnRideRefresherDTO rideRefresherDTO, boolean sender, UserOnRideDTO userOnRideDTO, boolean isCanceled) {
         removeDialog(dialog);
         dialogComplete = new Dialog(requireContext());
         dialogComplete.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -502,16 +540,20 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
         Button okButton = dialogComplete.findViewById(R.id.okButton);
         TextView textView = dialogComplete.findViewById(R.id.complete_text);
-        if(!sender)
-            textView.setText(userOnRideDTO.getRideDTO().getUserSender().getFirstName() + " " + userOnRideDTO.getRideDTO().getUserSender().getLastName() + " is arrived. Beep Completed");
-        else
-            textView.setText("You arrived to " + userOnRideDTO.getRideDTO().getUserReceiver().getFirstName() + " " +userOnRideDTO.getRideDTO().getUserReceiver().getLastName() + ". Beep Completed");
+        if(!isCanceled) {
+            if (!sender)
+                textView.setText(userOnRideDTO.getRideDTO().getUserSender().getFirstName() + " " + userOnRideDTO.getRideDTO().getUserSender().getLastName() + " is arrived. Beep Completed");
+            else
+                textView.setText("You arrived to " + userOnRideDTO.getRideDTO().getUserReceiver().getFirstName() + " " + userOnRideDTO.getRideDTO().getUserReceiver().getLastName() + ". Beep Completed");
+        }else{
+            textView.setText("Ride have been canceled and stopped");
+        }
         okButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                dialogComplete.dismiss();
-                dialogComplete = null;
+                removeCompleteDialog(dialogComplete);
                 otherMarker.remove();
+                showOtherFocusOnMap = false;
             }
         });
 
@@ -524,7 +566,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void createReceiverMarker(OnRideRefresherDTO rideRefresherDTO) {
-        BitmapDrawable bitmap = (BitmapDrawable) getResources().getDrawable(R.drawable.blue_dot, getContext().getTheme());
+        BitmapDrawable bitmap = (BitmapDrawable) getResources().getDrawable(R.drawable.user, getContext().getTheme());
         Bitmap b = bitmap.getBitmap();
         Bitmap smallMarker = Bitmap.createScaledBitmap(b, 58, 58, false);
 
@@ -537,20 +579,34 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private void updateMapCameraToOtherAndMarker(OnRideRefresherDTO rideRefresherDTO, boolean sender) {
         LatLng senderLatLng = new LatLng(rideRefresherDTO.getSenderCurrentLocation().getLatitude(), rideRefresherDTO.getSenderCurrentLocation().getLongitude());
         LatLng recieverLatLng = new LatLng(rideRefresherDTO.getReceiverCurrentLocation().getLatitude(),rideRefresherDTO.getReceiverCurrentLocation().getLongitude());
+        GoogleMap.CancelableCallback cancelableCallback =  new GoogleMap.CancelableCallback() {
+            @Override
+            public void onCancel() {
+
+            }
+
+            @Override
+            public void onFinish() {
+                prevCameraPosition = mMap.getCameraPosition();
+            }
+        };
         if(!sender){
             otherMarker.setPosition(senderLatLng);
             otherMarker.setRotation(rideRefresherDTO.getSenderCurrentLocation().getBearing());
             if(showOtherFocusOnMap && prevCameraPosition.equals(mMap.getCameraPosition())) {
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(senderLatLng, 30));
-                prevCameraPosition = mMap.getCameraPosition();
+                //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(senderLatLng, 30));
+                //prevCameraPosition = mMap.getCameraPosition();
+                mMap.animateCamera(
+                        CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder().target(senderLatLng).zoom(17).bearing(0).build())
+                        ,cancelableCallback);
             }
         }
         else {
             otherMarker.setPosition(recieverLatLng);
             otherMarker.setRotation(rideRefresherDTO.getReceiverCurrentLocation().getBearing());
             if(showOtherFocusOnMap && prevCameraPosition.equals(mMap.getCameraPosition())) {
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(recieverLatLng, 30));
-                prevCameraPosition = mMap.getCameraPosition();
+                //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(recieverLatLng, 30));
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(recieverLatLng, 30),cancelableCallback);
             }
         }
     }
@@ -571,16 +627,24 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         dialog.setCanceledOnTouchOutside(false);
         dialog.setCancelable(false);
 
-        iconButton = dialog.findViewById(R.id.showOtherIcon);
+        focusOnOtherButton = dialog.findViewById(R.id.showOtherIcon);
+        ImageButton cancelRideButton = dialog.findViewById(R.id.cancelRide);
 
         if(sender)
-            iconButton.setImageResource(R.drawable.blue_dot);
+            focusOnOtherButton.setImageResource(R.drawable.user);
 
-        iconButton.setOnClickListener(new View.OnClickListener() {
+        focusOnOtherButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 showOtherFocusOnMap = true;
                 prevCameraPosition = mMap.getCameraPosition();
+            }
+        });
+
+        cancelRideButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                cancelRide(onRideDTO);
             }
         });
 
@@ -604,6 +668,59 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         dialog.getWindow().setGravity(Gravity.BOTTOM);
         dialog.show();
 
+    }
+
+    private void cancelRide(UserOnRideDTO onRideDTO) {
+        String finalUrl = HttpUrl
+                .parse(CANCEL_RIDE + onRideDTO.getRideDTO().getRideID())
+                .newBuilder()
+                .build()
+                .toString();
+        Gson gson = new Gson();
+        RequestBody requestBody = RequestBody.create("", MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+                .url(finalUrl)
+                .post(requestBody)
+                .build();
+
+        HttpClientUtil.runAsync(request, new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
+            }
+        });
+    }
+    private void cancelInvitation(UserOnRideDTO onRideDTO) {
+        String finalUrl = HttpUrl
+                .parse(CANCEL_INVITATION + onRideDTO.getRideDTO().getInvitationID())
+                .newBuilder()
+                .build()
+                .toString();
+        Gson gson = new Gson();
+        RequestBody requestBody = RequestBody.create("", MediaType.parse("application/json"));
+
+        Request request = new Request.Builder()
+                .url(finalUrl)
+                .post(requestBody)
+                .build();
+
+        HttpClientUtil.runAsync(request, new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                String responseBody = response.body().string();
+            }
+        });
     }
 
 

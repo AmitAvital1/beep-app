@@ -27,4 +27,7 @@ public class RideService {
     public void setRideComplete(RideEntity rideEntity){
         rideEntity.setRideCompleted();
     }
+    public void cancelRide(RideEntity rideEntity){
+        rideEntity.setRideCanceled();
+    }
 }

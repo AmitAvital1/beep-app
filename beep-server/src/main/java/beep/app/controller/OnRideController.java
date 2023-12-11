@@ -70,4 +70,16 @@ public class OnRideController {
         OnRideRefresherDTO onRideRefresherDTO = new OnRideRefresherDTO(rideEntity.getRideStatus(),new LocationDTO(null,rideEntity.getSenderCurrentLatitude(), rideEntity.getSenderCurrentLongitude(), rideEntity.getSenderCurrentBearing()),locationDTO,distanceText,durationText);
         return ResponseEntity.ok().body(onRideRefresherDTO);
     }
+    @PostMapping("/cancel-ride/{ride_id}")
+    public ResponseEntity<?> cancelRide(@PathVariable String ride_id, HttpServletRequest request){
+        RideEntity rideEntity;
+        synchronized (this){
+            rideEntity = rideService.findById(ride_id).get();
+            if(rideEntity.getRideStatus().equals(RideStatus.ON_RIDE.toString())) {
+                rideService.cancelRide(rideEntity);
+                rideService.save(rideEntity);
+            }
+        }
+        return ResponseEntity.ok().body("Ride has been canceled");
+    }
 }

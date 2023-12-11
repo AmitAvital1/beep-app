@@ -140,4 +140,12 @@ public class RideInvitationEntity {
         invitationSender.setOnRide(null);
         invitationReceiver.setOnRide(null);
     }
+    @Transactional
+    public void cancelInvitation(){
+        invitationStatus = InvitationStatus.CANCELED.toString();
+        UserEntity invitationSender = this.getSender();
+        UserEntity invitationReceiver = this.getReceiver();
+        invitationSender.setOnRide(null);
+        invitationReceiver.setOnRide(null);
+    }
 }

@@ -1,48 +1,69 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/dialog_bg">
+    android:background="@drawable/dialog_bg"
+    android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/invitation_text"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textAlignment="center"
-        android:text="Choose"
-        android:textColor="@color/black"
-        android:layout_marginTop="5dp"
-        android:textSize="25dp"
-        android:textStyle="bold"/>
+    <ImageButton
+        android:id="@+id/cancelInvitation"
+        android:layout_width="38sp"
+        android:layout_height="38sp"
+        android:background="?android:attr/selectableItemBackground"
+        android:contentDescription="Button with Icon"
+        android:scaleType="centerInside"
+        android:src="@drawable/cancel_logo"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:ignore="TouchTargetSizeCheck" />
 
     <LinearLayout
-        android:id="@+id/layoutEdit"
-        android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="8dp"
-        >
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintTop_toBottomOf="@id/cancelInvitation"
+        app:layout_constraintVertical_bias="0.5">
 
-
-        <Button
-            android:id="@+id/acceptButton"
-            android:layout_width="wrap_content"
+        <TextView
+            android:id="@+id/invitation_text"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Accept"
-            android:textColorHighlight="#4CAF50"
-            android:textColorLink="#4CAF50" />
+            android:layout_marginTop="5dp"
+            android:text="Choose"
+            android:textAlignment="center"
+            android:textColor="@color/black"
+            android:textSize="25dp"
+            android:textStyle="bold" />
 
-        <Button
-            android:id="@+id/rejectButton"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:id="@+id/layoutEdit"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Reject"
-            />
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+
+            <Button
+                android:id="@+id/acceptButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginRight="20sp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/green"
+                android:text="Accept" />
+
+            <Button
+                android:id="@+id/rejectButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="20sp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/red"
+                android:text="Reject" />
+        </LinearLayout>
     </LinearLayout>
-
-
-
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -67,28 +67,52 @@ public class RideInvitationController {
     }
     @PostMapping("/accept-invitation/{invitation_id}")
     public ResponseEntity<?> acceptInvitation(@PathVariable String invitation_id, HttpServletRequest request, @RequestBody LocationDTO locationDTO ){
-        Optional<RideInvitationEntity> optionalRideInvitationEntity = rideInvitationRepository.findById(UUID.fromString(invitation_id));
-        RideInvitationEntity rideInvitationEntity = optionalRideInvitationEntity.get();
-        rideInvitationEntity.setInvitationStatus(InvitationStatus.ACCEPTED.toString());
-        RideEntity rideEntity = new RideEntity(rideInvitationEntity.getSender(),rideInvitationEntity.getReceiver());
-        rideEntity.setSenderCurrentLatitude(rideInvitationEntity.getSourceLatitude());
-        rideEntity.setSenderCurrentLongitude(rideInvitationEntity.getSourceLongitude());
-        rideEntity.setReceiverCurrentLatitude(locationDTO.getLatitude());
-        rideEntity.setReceiverCurrentLongitude(locationDTO.getLongitude());
-        rideEntity.setSenderCurrentBearing(Float.valueOf(0));
-        rideEntity.setReceiverCurrentBearing(locationDTO.getBearing());
-        rideInvitationEntity.setRideEntity(rideEntity);
+        synchronized (this) {
+            Optional<RideInvitationEntity> optionalRideInvitationEntity = rideInvitationRepository.findById(UUID.fromString(invitation_id));
+            RideInvitationEntity rideInvitationEntity = optionalRideInvitationEntity.get();
+            if(rideInvitationEntity.getInvitationStatus().equals(InvitationStatus.PENDING.toString())) {
+                rideInvitationEntity.setInvitationStatus(InvitationStatus.ACCEPTED.toString());
+                RideEntity rideEntity = new RideEntity(rideInvitationEntity.getSender(), rideInvitationEntity.getReceiver());
+                rideEntity.setSenderCurrentLatitude(rideInvitationEntity.getSourceLatitude());
+                rideEntity.setSenderCurrentLongitude(rideInvitationEntity.getSourceLongitude());
+                rideEntity.setReceiverCurrentLatitude(locationDTO.getLatitude());
+                rideEntity.setReceiverCurrentLongitude(locationDTO.getLongitude());
+                rideEntity.setSenderCurrentBearing(Float.valueOf(0));
+                rideEntity.setReceiverCurrentBearing(locationDTO.getBearing());
+                rideInvitationEntity.setRideEntity(rideEntity);
 
-
-        rideInvitationRepository.save(rideInvitationEntity);
-        return ResponseEntity.ok().body("");
+                rideInvitationRepository.save(rideInvitationEntity);
+                return ResponseEntity.ok().body("Invitation accepted");
+            }else
+                return ResponseEntity.status(HttpServletResponse.SC_REQUEST_TIMEOUT).body("Invitation has been canceled");
+        }
     }
     @PostMapping("/reject-invitation/{invitation_id}")
     public ResponseEntity<?> acceptInvitation(@PathVariable String invitation_id, HttpServletRequest request){
-        Optional<RideInvitationEntity> optionalRideInvitationEntity = rideInvitationRepository.findById(UUID.fromString(invitation_id));
-        RideInvitationEntity rideInvitationEntity = optionalRideInvitationEntity.get();
-        rideInvitationEntity.rejectInvitation();
-        rideInvitationRepository.save(rideInvitationEntity);
-        return ResponseEntity.ok().body("");
+        synchronized (this) {
+            Optional<RideInvitationEntity> optionalRideInvitationEntity = rideInvitationRepository.findById(UUID.fromString(invitation_id));
+            RideInvitationEntity rideInvitationEntity = optionalRideInvitationEntity.get();
+            if(rideInvitationEntity.getInvitationStatus().equals(InvitationStatus.PENDING.toString())) {
+                rideInvitationEntity.rejectInvitation();
+                rideInvitationRepository.save(rideInvitationEntity);
+                return ResponseEntity.ok().body("Invitation rejected");
+            }else{
+                return ResponseEntity.status(HttpServletResponse.SC_REQUEST_TIMEOUT).body("Invitation has been canceled");
+            }
+        }
+    }
+    @PostMapping("/cancel-invitation/{invitation_id}")
+    public ResponseEntity<?> cancelInvitation(@PathVariable String invitation_id, HttpServletRequest request){
+        synchronized(this){
+            Optional<RideInvitationEntity> optionalRideInvitationEntity = rideInvitationRepository.findById(UUID.fromString(invitation_id));
+            RideInvitationEntity rideInvitationEntity = optionalRideInvitationEntity.get();
+            if(rideInvitationEntity.getInvitationStatus().equals(InvitationStatus.PENDING.toString())) {
+                rideInvitationEntity.cancelInvitation();
+                rideInvitationRepository.save(rideInvitationEntity);
+                return ResponseEntity.ok().body("Invitation canceled");
+            }else{
+                return ResponseEntity.status(HttpServletResponse.SC_REQUEST_TIMEOUT).body("Invitation already has been answered by the receiver");
+            }
+        }
     }
 }

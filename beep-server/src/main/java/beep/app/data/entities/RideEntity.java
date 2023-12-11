@@ -200,4 +200,13 @@ public class RideEntity {
         rideReceiver.setOnRide(null);
     }
 
+    @Transactional
+    public void setRideCanceled() {
+        rideStatus = RideStatus.CANCELED.toString();
+        rideEndTime = LocalDateTime.now();
+        UserEntity rideSender = this.getSender();
+        UserEntity rideReceiver = this.getReceiver();
+        rideSender.setOnRide(null);
+        rideReceiver.setOnRide(null);
+    }
 }
