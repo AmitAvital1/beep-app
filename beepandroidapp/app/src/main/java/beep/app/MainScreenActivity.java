@@ -279,11 +279,13 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
             fragmentManager.beginTransaction()
                     .replace(R.id.fragmentContainer, mapFragment)
                     .commit();
-            Toast.makeText(this, "Home", Toast.LENGTH_LONG).show();
         } else if (itemId == R.id.nav_locations) {
             Toast.makeText(this, "My Location", Toast.LENGTH_LONG).show();
         } else if (itemId == R.id.nav_rides) {
-            Toast.makeText(this, "My Rides", Toast.LENGTH_LONG).show();
+            RidesFragment ridesFragment = new RidesFragment();
+            fragmentManager.beginTransaction()
+                    .replace(R.id.fragmentContainer, ridesFragment)
+                    .commit();
         } else if (itemId == R.id.nav_profile) {
             fragmentManager.beginTransaction()
                 .replace(R.id.fragmentContainer, new ProfileFragment())
@@ -336,7 +338,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         Gson gson = new Gson();
         LocationDTO locationDTO;
         if(mapFragment.getCurrentLocation() != null)
-            locationDTO = new LocationDTO(null, mapFragment.getCurrentLocation().getLatitude(),mapFragment.getCurrentLocation().getLongitude(),mapFragment.getLastBearing());
+            locationDTO = new LocationDTO(mapFragment.getShortAddress(getApplicationContext(),mapFragment.getCurrentLocation()), mapFragment.getCurrentLocation().getLatitude(),mapFragment.getCurrentLocation().getLongitude(),mapFragment.getLastBearing());
         else
             locationDTO = new LocationDTO(null, null,null,null);
         String json = gson.toJson(locationDTO);

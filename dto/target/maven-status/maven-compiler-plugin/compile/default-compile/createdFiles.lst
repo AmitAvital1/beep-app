@@ -3,5 +3,6 @@ location\LocationDTO.class
 login\UserDTO.class
 ride\RideDTO.class
 ride\OnRideRefresherDTO.class
+fetch\RideMenuDTO.class
 fetch\InvitationDetailsDTO.class
 search\UserPhoneExistDTO.class

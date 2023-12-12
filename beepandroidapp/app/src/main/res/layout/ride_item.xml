@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/titleTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/amaranth_bold"
+        android:textSize="20dp"
+        android:text="Beep from Yossi Yossi to Amit Avital" />
+
+    <TextView
+        android:id="@+id/statusRide"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="@font/amaranth"
+        android:textSize="16dp"
+        android:text="Completed 2023-12-10 16:12:40"
+        android:layout_marginTop="5sp"
+        android:layout_marginBottom="5sp"/>
+
+    <TextView
+        android:id="@+id/endLocation"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Beep target:"
+        android:layout_marginBottom="5sp"/>
+    <TextView
+        android:id="@+id/startingTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Start time:"
+        />
+    <TextView
+        android:id="@+id/duration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Duration:"
+        android:layout_marginBottom="5sp"/>
+
+</LinearLayout>

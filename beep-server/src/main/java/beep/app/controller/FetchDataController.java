@@ -5,6 +5,7 @@ import beep.app.data.entities.RideEntity;
 import beep.app.data.entities.RideInvitationEntity;
 import beep.app.data.entities.UserEntity;
 import beep.app.utils.SessionUtils;
+import fetch.RideMenuDTO;
 import fetch.UserOnRideDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,8 +16,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import ride.RideDTO;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static beep.app.controller.SearchController.cleanPhoneNumber;
 
@@ -68,6 +72,25 @@ public class FetchDataController {
                 userOnRideDTO.setRideDTO(rideDTO);
             }
             return ResponseEntity.ok().body(userOnRideDTO);
+        }
+    }
+    @GetMapping("/get-rides")
+    public ResponseEntity<?> getAllRides(HttpServletRequest request){
+        String userIdFromSession = SessionUtils.getUserId(request);
+        if (userIdFromSession == null) {
+            return ResponseEntity.status(HttpServletResponse.SC_UNAUTHORIZED).body("Error user not authorized");
+        }else {
+            Optional<UserEntity> userSenderEntityOptional = userRepository.findById(UUID.fromString(userIdFromSession));
+            if (!userSenderEntityOptional.isPresent())
+                return ResponseEntity.status(HttpServletResponse.SC_BAD_GATEWAY).body("User not exist");
+
+            UserEntity userEntity = userSenderEntityOptional.get();
+            List<RideMenuDTO> rideMenuDTOList = new ArrayList<>();
+            List<RideEntity> rideEntities = userEntity.getRidesByMostRecent();
+            rideMenuDTOList = rideEntities.stream().map(rideEntity -> {
+                return new RideMenuDTO(rideEntity.getSender().getFullName(),rideEntity.getReceiver().getFullName(),rideEntity.getRideStatus(),rideEntity.getStartTimeForDTO(),rideEntity.getEndTimeForDTO(),rideEntity.getDurationOnString(),rideEntity.getRideInvitationEntity().getReceiverStartingAddress());})
+                .collect(Collectors.toList());
+            return ResponseEntity.ok().body(rideMenuDTOList);
         }
     }
 }

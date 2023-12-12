@@ -8,7 +8,9 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 import static beep.engine.ride.RideStatus.ON_RIDE;
@@ -208,5 +210,34 @@ public class RideEntity {
         UserEntity rideReceiver = this.getReceiver();
         rideSender.setOnRide(null);
         rideReceiver.setOnRide(null);
+    }
+    public String getDurationOnString(){
+        if(rideStartTime == null || rideEndTime == null)
+            return "N/A";
+
+        Duration duration = Duration.between(rideStartTime, rideEndTime);
+
+        long minutes = duration.toMinutes();
+        long hours = duration.toHours();
+
+        if (hours < 1) {
+            return String.format("%d Min", minutes);
+        } else {
+            return String.format("%d:%02d Hours", hours, minutes % 60);
+        }
+    }
+    public String getStartTimeForDTO(){
+        if(rideStartTime == null)
+            return "N/A";
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return rideStartTime.format(formatter);
+    }
+    public String getEndTimeForDTO(){
+        if(rideEndTime == null)
+            return "N/A";
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return rideEndTime.format(formatter);
     }
 }

@@ -53,6 +53,7 @@ public class RideInvitationController {
                 return ResponseEntity.status(HttpServletResponse.SC_BAD_GATEWAY).body("Cannot send invitation while you / target on a ride.");
 
             RideInvitationEntity newInvitation = new RideInvitationEntity(userSenderEntity,userReceiverEntity,locationDTO.getLatitude(),locationDTO.getLongitude());
+            newInvitation.setSourceStartingAddress(locationDTO.getLocationName());
             userSenderEntity.addSentInvitation(newInvitation);
             userReceiverEntity.addReceiveInvitation(newInvitation);
 
@@ -80,6 +81,7 @@ public class RideInvitationController {
                 rideEntity.setSenderCurrentBearing(Float.valueOf(0));
                 rideEntity.setReceiverCurrentBearing(locationDTO.getBearing());
                 rideInvitationEntity.setRideEntity(rideEntity);
+                rideInvitationEntity.setReceiverStartingAddress(locationDTO.getLocationName());
 
                 rideInvitationRepository.save(rideInvitationEntity);
                 return ResponseEntity.ok().body("Invitation accepted");
@@ -88,7 +90,7 @@ public class RideInvitationController {
         }
     }
     @PostMapping("/reject-invitation/{invitation_id}")
-    public ResponseEntity<?> acceptInvitation(@PathVariable String invitation_id, HttpServletRequest request){
+    public ResponseEntity<?> rejectInvitation(@PathVariable String invitation_id, HttpServletRequest request){
         synchronized (this) {
             Optional<RideInvitationEntity> optionalRideInvitationEntity = rideInvitationRepository.findById(UUID.fromString(invitation_id));
             RideInvitationEntity rideInvitationEntity = optionalRideInvitationEntity.get();

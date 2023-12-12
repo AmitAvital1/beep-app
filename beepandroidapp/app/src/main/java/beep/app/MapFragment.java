@@ -10,22 +10,29 @@ import static beep.app.util.Constants.SENDER_ON_RIDE;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -56,6 +63,8 @@ import com.google.gson.Gson;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Locale;
 
 import beep.app.util.http.HttpClientUtil;
 import fetch.UserOnRideDTO;
@@ -82,17 +91,27 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     private static final long FETCH_IF_HAS_RIDE = 4000; // 4 seconds
     private static final long FETCH_IN_RIDE = 300; // 300ms
     private Handler handler = new Handler(Looper.myLooper());
-    private Runnable dataFetchRunnable;
     private Runnable onRideDataFetch;
     private Dialog dialog = null;
     private Dialog dialogComplete = null;
     private Marker otherMarker = null;
     private boolean showOtherFocusOnMap = false;
+    private boolean focusThisFragment = true;
     private ImageButton focusOnOtherButton;
     private LocationCallback currentLocationCallback;
 
 
     private GoogleMap mMap;
+    private Runnable dataFetchRunnable = new Runnable() {
+        @Override
+        public void run() {
+            // Fetch data from the server
+            fetchDataFromServer();
+
+            // Schedule the next fetch after the interval
+            handler.postDelayed(this, FETCH_IF_HAS_RIDE);
+        }
+    };
 
     private final ActivityResultLauncher<String[]> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(), isGranted -> {
@@ -110,8 +129,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                     // Permission is denied, handle it
                 }
             });
-
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_map, container, false);
@@ -119,21 +136,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         SupportMapFragment supportMapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.mapContainer);
         supportMapFragment.getMapAsync(this);
         firstFetch = true;
-
-        dataFetchRunnable = new Runnable() {
-            @Override
-            public void run() {
-                // Fetch data from the server
-                fetchDataFromServer();
-
-                // Schedule the next fetch after the interval
-                handler.postDelayed(this, FETCH_IF_HAS_RIDE);
-            }
-        };
-
         return rootView;
     }
-
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
@@ -300,16 +304,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    @Override
-    public void onDestroy() {
+  @Override
+  public void onDestroy() {
         handler.removeCallbacks(dataFetchRunnable);
         removeDialog(dialog);
         removeCompleteDialog(dialogComplete);
         otherMarker = null;
         showOtherFocusOnMap = false;
         fusedLocationProviderClient.removeLocationUpdates(currentLocationCallback);
-        super.onDestroy();
-
+       super.onDestroy();
     }
 
     private void showInvitationRideDialog(String text, boolean isSender, UserOnRideDTO userOnRideDTO) {
@@ -397,7 +400,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 .toString();
 
         Gson gson = new Gson();
-        String json = gson.toJson(new LocationDTO(null, getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude(),lastBearing));
+        String json = gson.toJson(new LocationDTO(getShortAddress(requireContext(),currentLocation), getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude(),lastBearing));
         RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
@@ -516,7 +519,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
                         }else if(rideRefresherDTO.getRideStatus().equals("COMPLETED")){
                             handler.removeCallbacks(onRideDataFetch);
-                            createRideCompleteDialog(rideRefresherDTO,sender,userOnRideDTO,false);
+                                createRideCompleteDialog(rideRefresherDTO,sender,userOnRideDTO,false);
                             startDataFetch(dataFetchRunnable,FETCH_IF_HAS_RIDE);
                         }
                         else if(rideRefresherDTO.getRideStatus().equals("CANCELED")){
@@ -552,7 +555,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(View v) {
                 removeCompleteDialog(dialogComplete);
-                otherMarker.remove();
+                if(otherMarker != null)
+                    otherMarker.remove();
                 showOtherFocusOnMap = false;
             }
         });
@@ -721,6 +725,32 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 String responseBody = response.body().string();
             }
         });
+    }
+    public String getShortAddress(Context context, Location location) {
+        Geocoder geocoder = new Geocoder(context, Locale.getDefault());
+        String shortAddress = "";
+
+        try {
+            List<Address> addresses = geocoder.getFromLocation(
+                    location.getLatitude(),
+                    location.getLongitude(),
+                    1);
+
+            if (!addresses.isEmpty()) {
+                Address address = addresses.get(0);
+
+                if (address.getThoroughfare() != null) {
+                    shortAddress += address.getThoroughfare() + ", ";
+                }
+                if (address.getLocality() != null) {
+                    shortAddress += address.getLocality();
+                }
+            }
+        } catch (IOException e) {
+            Log.e("Geocoder", "Error getting address", e);
+        }
+
+        return shortAddress;
     }
 
 

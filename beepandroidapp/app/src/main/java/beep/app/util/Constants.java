@@ -19,4 +19,5 @@ public class Constants {
     public final static String RECEIVER_ON_RIDE = FULL_SERVER_PATH + "/receiver-ride/";
     public final static String CANCEL_RIDE = FULL_SERVER_PATH + "/cancel-ride/";
     public final static String CANCEL_INVITATION = FULL_SERVER_PATH + "/cancel-invitation/";
+    public final static String FETCH_RIDES = FULL_SERVER_PATH + "/get-rides";
 }

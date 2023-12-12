@@ -2,11 +2,14 @@ package beep.app.data.entities;
 
 import beep.engine.ride.RideStatus;
 import beep.engine.ride.invitation.InvitationStatus;
+import beep.engine.ride.invitation.RideInvitation;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -41,6 +44,12 @@ public class RideInvitationEntity {
 
     @Column(name="invitation_status")
     private String invitationStatus;
+
+    @Column(name="source_starting_address")
+    private String sourceStartingAddress;
+
+    @Column(name="receiver_starting_address")
+    private String receiverStartingAddress;
 
     @OneToOne(cascade = {CascadeType.PERSIST,CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH})
     @JoinColumn(name = "ride_id")
@@ -130,6 +139,22 @@ public class RideInvitationEntity {
 
     public void setRideEntity(RideEntity rideEntity) {
         this.rideEntity = rideEntity;
+    }
+
+    public String getSourceStartingAddress() {
+        return sourceStartingAddress;
+    }
+
+    public void setSourceStartingAddress(String sourceStartingAddress) {
+        this.sourceStartingAddress = sourceStartingAddress;
+    }
+
+    public String getReceiverStartingAddress() {
+        return receiverStartingAddress;
+    }
+
+    public void setReceiverStartingAddress(String receiverStartingAddress) {
+        this.receiverStartingAddress = receiverStartingAddress;
     }
 
     @Transactional

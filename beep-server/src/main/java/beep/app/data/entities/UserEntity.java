@@ -1,11 +1,12 @@
 package beep.app.data.entities;
 
+import beep.engine.ride.invitation.InvitationStatus;
+import beep.engine.ride.invitation.RideInvitation;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
@@ -131,6 +132,7 @@ public class UserEntity {
     public void setReceivedInvitations(List<RideInvitationEntity> receivedInvitations) {
         this.receivedInvitations = receivedInvitations;
     }
+    public String getFullName(){ return firstName + " " + lastName; }
 
     public RideInvitationEntity getOnRide() {
         return onRide;
@@ -138,5 +140,17 @@ public class UserEntity {
 
     public void setOnRide(RideInvitationEntity onRide) {
         this.onRide = onRide;
+    }
+    public List<RideInvitationEntity> getAllInvitationsByMostRecent(){
+        List<RideInvitationEntity> allInvitations = new ArrayList<>();
+        allInvitations.addAll(getReceivedInvitations());
+        allInvitations.addAll(getSentInvitations());
+        Collections.sort(allInvitations, Comparator.comparing(RideInvitationEntity::getDateTime).reversed());
+        return allInvitations;
+    }
+    public List<RideEntity> getRidesByMostRecent(){
+        List<RideInvitationEntity> allInvitationsMostRecent = getAllInvitationsByMostRecent();
+        allInvitationsMostRecent.removeIf(invitation -> !invitation.getInvitationStatus().equals(InvitationStatus.ACCEPTED.toString()));
+        return allInvitationsMostRecent.stream().map(RideInvitationEntity::getRideEntity).collect(Collectors.toList());
     }
 }
