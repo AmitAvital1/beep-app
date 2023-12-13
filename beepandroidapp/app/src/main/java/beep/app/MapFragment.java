@@ -28,6 +28,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import android.os.Handler;
@@ -50,6 +51,7 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.GoogleMapOptions;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
@@ -102,6 +104,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
 
     private GoogleMap mMap;
+
     private Runnable dataFetchRunnable = new Runnable() {
         @Override
         public void run() {
@@ -132,12 +135,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_map, container, false);
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getContext());
         SupportMapFragment supportMapFragment = (SupportMapFragment) getChildFragmentManager().findFragmentById(R.id.mapContainer);
         supportMapFragment.getMapAsync(this);
         firstFetch = true;
         return rootView;
     }
+
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
@@ -145,10 +148,15 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         requestPermissions();
     }
 
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        requestPermissions();
+    }
     private void requestPermissions() {
         String[] permissions = {Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION};
-        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             getLastLocation();
             startDataFetch(dataFetchRunnable, FETCH_IF_HAS_RIDE);
         } else {
@@ -159,6 +167,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     @SuppressLint("MissingPermission")
     public void getLastLocation() {
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
         mMap.setMyLocationEnabled(true);
         currentLocationCallback = new LocationCallback() {
             @Override
@@ -312,12 +321,17 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         otherMarker = null;
         showOtherFocusOnMap = false;
         fusedLocationProviderClient.removeLocationUpdates(currentLocationCallback);
+      if(dialog != null)
+          dialog.dismiss();
+      if(dialogComplete != null)
+          dialogComplete.dismiss();
        super.onDestroy();
     }
 
+
     private void showInvitationRideDialog(String text, boolean isSender, UserOnRideDTO userOnRideDTO) {
         removeCompleteDialog(dialogComplete);
-        dialog = new Dialog(requireContext());
+        dialog = new Dialog(requireActivity());
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.bottom_invitation_dialog);
         dialog.setCanceledOnTouchOutside(false);
@@ -535,7 +549,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private void createRideCompleteDialog(OnRideRefresherDTO rideRefresherDTO, boolean sender, UserOnRideDTO userOnRideDTO, boolean isCanceled) {
         removeDialog(dialog);
-        dialogComplete = new Dialog(requireContext());
+        dialogComplete = new Dialog(requireActivity());
         dialogComplete.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialogComplete.setContentView(R.layout.bottom_complete_ride_dialog);
         dialogComplete.setCanceledOnTouchOutside(false);
@@ -625,7 +639,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     }
 
     private void createRideDialog(OnRideRefresherDTO rideRefresherDTO, UserOnRideDTO onRideDTO, boolean sender) {
-        dialog = new Dialog(requireContext());
+        dialog = new Dialog(requireActivity());
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.bottom_on_ride_dialog);
         dialog.setCanceledOnTouchOutside(false);

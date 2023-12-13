@@ -15,6 +15,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -74,6 +75,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
     private int lastSelectedItem = R.id.nav_home;
     private MapFragment mapFragment;
     private FragmentManager fragmentManager;
+    private Fragment notMapFragment;
 
 
     private SearchView searchView;
@@ -276,15 +278,16 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         }
         lastSelectedItem = itemId;
         if (itemId == R.id.nav_home) {
-            fragmentManager.beginTransaction()
-                    .replace(R.id.fragmentContainer, mapFragment)
-                    .commit();
+            fragmentManager.beginTransaction().remove(notMapFragment).commit();
+            //fragmentManager.beginTransaction()
+            //        .replace(R.id.fragmentContainer, mapFragment)
+             //       .commit();
         } else if (itemId == R.id.nav_locations) {
             Toast.makeText(this, "My Location", Toast.LENGTH_LONG).show();
         } else if (itemId == R.id.nav_rides) {
-            RidesFragment ridesFragment = new RidesFragment();
+            notMapFragment = new RidesFragment();
             fragmentManager.beginTransaction()
-                    .replace(R.id.fragmentContainer, ridesFragment)
+                    .add(R.id.fragmentContainer, notMapFragment)
                     .commit();
         } else if (itemId == R.id.nav_profile) {
             fragmentManager.beginTransaction()
