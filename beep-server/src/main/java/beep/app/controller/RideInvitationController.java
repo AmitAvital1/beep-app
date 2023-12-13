@@ -63,7 +63,7 @@ public class RideInvitationController {
             userRepository.save(userSenderEntity);
             userRepository.save(userReceiverEntity);
 
-            return ResponseEntity.ok().body(userSenderEntity.getFirstName() + " " + userSenderEntity.getLastName());
+            return ResponseEntity.ok().body("Invitation sent successfully");
         }
     }
     @PostMapping("/accept-invitation/{invitation_id}")

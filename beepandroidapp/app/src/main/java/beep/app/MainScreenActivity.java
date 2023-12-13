@@ -80,6 +80,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
     private Fragment notMapFragment;
     private Button enableLocationButton;
     private boolean mapLoaded = false;
+    private boolean invitationSent = false;
 
 
     private SearchView searchView;
@@ -133,6 +134,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
 
         contactList = new ArrayList<>();
         contactAdapter = new ContactItemAdapter(contactList, item -> {
+            contactRecyclerView.setVisibility(View.GONE);
             contactItemClicked(item);
         });
         contactRecyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -372,44 +374,44 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
     }
 
     private void contactItemClicked(ContactItem item) {
-        String finalUrl = HttpUrl
-                .parse(INVITE)
-                .newBuilder()
-                .build()
-                .toString();
+        if (!invitationSent) {
+            invitationSent = true;
+            String finalUrl = HttpUrl
+                    .parse(INVITE)
+                    .newBuilder()
+                    .build()
+                    .toString();
 
-        Gson gson = new Gson();
-        LocationDTO locationDTO;
-        if(mapFragment.getCurrentLocation() != null)
-            locationDTO = new LocationDTO(mapFragment.getShortAddress(getApplicationContext(),mapFragment.getCurrentLocation()), mapFragment.getCurrentLocation().getLatitude(),mapFragment.getCurrentLocation().getLongitude(),mapFragment.getLastBearing());
-        else
-            locationDTO = new LocationDTO(null, null,null,null);
-        String json = gson.toJson(locationDTO);
+            Gson gson = new Gson();
+            LocationDTO locationDTO;
+            if (mapFragment.getCurrentLocation() != null)
+                locationDTO = new LocationDTO(mapFragment.getShortAddress(getApplicationContext(), mapFragment.getCurrentLocation()), mapFragment.getCurrentLocation().getLatitude(), mapFragment.getCurrentLocation().getLongitude(), mapFragment.getLastBearing());
+            else
+                locationDTO = new LocationDTO(null, null, null, null);
+            String json = gson.toJson(locationDTO);
 
-        RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
-        Request request = new Request.Builder()
-                .url(finalUrl + item.getPhoneNumber())
-                .put(requestBody)
-                .build();
-        HttpClientUtil.runAsync(request, new Callback() {
+            RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
+            Request request = new Request.Builder()
+                    .url(finalUrl + item.getPhoneNumber())
+                    .put(requestBody)
+                    .build();
+            HttpClientUtil.runAsync(request, new Callback() {
 
-            @Override
-            public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                runOnUiThread(() -> {
-                    Toast.makeText(MainScreenActivity.this, e.toString(), Toast.LENGTH_LONG).show();
-                    System.out.println(e.toString());
-                });
-            }
-            @Override
-            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                String responseBody = response.body().string();
-                runOnUiThread(() -> {
-                    Toast.makeText(MainScreenActivity.this, responseBody, Toast.LENGTH_LONG).show();
-                });
-                if (response.code() == 400) { //Invalid code
+                @Override
+                public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                    invitationSent = false;
+                    runOnUiThread(() -> Toast.makeText(MainScreenActivity.this, e.toString(), Toast.LENGTH_LONG).show());
                 }
+                @Override
+                public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                    String responseBody = response.body().string();
+                    invitationSent = false;
+                    if (response.code() != 200) { //Invalid code
+                        runOnUiThread(() -> Toast.makeText(MainScreenActivity.this, responseBody, Toast.LENGTH_LONG).show());
+                    }
 
-            }
-        });
+                }
+            });
+        }
     }
 }

@@ -79,25 +79,4 @@ public class LoginController {
         // Check if the name contains only alphabetic characters
         return name.matches("^[a-zA-Z]{1,15}$");
     }
-   /* @PutMapping("/login")
-    public ResponseEntity<?> login(HttpServletRequest request,UserDTO dto){
-        UserEntity userEntity = userRepository.findByPhoneNumber(dto.getPhoneNumber());
-        if(userEntity != null){
-            String userIdFromSession = SessionUtils.getUserId(request);
-            if (userIdFromSession == null) {
-                request.getSession(true).setAttribute(Constants.USER_ID, userEntity.getUserId());
-            }else{
-                if(!userIdFromSession.equals(userEntity.getUserId())){
-                    SessionUtils.clearSession(request);
-                    request.getSession(true).setAttribute(Constants.USER_ID, userEntity.getUserId());
-                }
-            }
-            return ResponseEntity.status(200).body(userEntity);
-        }else{
-            return ResponseEntity.status(201).body(userEntity);
-        }
-
-    }*/
-
-
 }

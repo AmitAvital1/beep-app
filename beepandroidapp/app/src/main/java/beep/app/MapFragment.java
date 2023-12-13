@@ -10,7 +10,6 @@ import static beep.app.util.Constants.SENDER_ON_RIDE;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -25,8 +24,6 @@ import android.os.Bundle;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
@@ -50,7 +47,6 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
-import com.google.android.gms.maps.GoogleMapOptions;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
@@ -58,7 +54,6 @@ import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.tasks.Task;
 import com.google.gson.Gson;
 
 import org.jetbrains.annotations.NotNull;
@@ -357,8 +352,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         acceptButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
-                acceptInvitation(userOnRideDTO);
+                acceptButton.setEnabled(false);
+                acceptInvitation(userOnRideDTO,acceptButton);
 
             }
         });
@@ -366,7 +361,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         rejectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                rejectInvitation(userOnRideDTO);
+                rejectButton.setEnabled(false);
+                rejectInvitation(userOnRideDTO,rejectButton);
                 removeDialog(dialog);
                 if(otherMarker != null)
                     otherMarker.remove();
@@ -376,7 +372,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         cancelInvitation.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                cancelInvitation(userOnRideDTO);
+                cancelInvitation.setEnabled(false);
+                cancelInvitation(userOnRideDTO,cancelInvitation);
                 removeDialog(dialog);
                 if(otherMarker != null)
                     otherMarker.remove();
@@ -400,7 +397,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-    private void acceptInvitation(UserOnRideDTO userOnRideDTO) {
+    private void acceptInvitation(UserOnRideDTO userOnRideDTO, Button acceptButton) {
         String finalUrl = HttpUrl
                 .parse(ACCEPT_INVITATION + userOnRideDTO.getRideDTO().getInvitationID())
                 .newBuilder()
@@ -420,7 +417,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         HttpClientUtil.runAsync(request, new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-
+                handler.post(() -> acceptButton.setEnabled(true));
             }
 
             @Override
@@ -430,10 +427,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 }else{
                     showOtherFocusOnMap = true;
                 }
+                handler.post(() -> acceptButton.setEnabled(true));
             }
         });
     }
-    private void rejectInvitation(UserOnRideDTO userOnRideDTO) {
+    private void rejectInvitation(UserOnRideDTO userOnRideDTO, Button rejectButton) {
         String finalUrl = HttpUrl
                 .parse(REJECT_INVITATION + userOnRideDTO.getRideDTO().getInvitationID())
                 .newBuilder()
@@ -451,7 +449,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         HttpClientUtil.runAsync(request, new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-
+                handler.post(() -> rejectButton.setEnabled(true));
             }
 
             @Override
@@ -461,6 +459,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 }else{
 
                 }
+                handler.post(() -> rejectButton.setEnabled(true));
             }
         });
     }
@@ -656,7 +655,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         cancelRideButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                cancelRide(onRideDTO);
+                cancelRideButton.setEnabled(true);
+                cancelRide(onRideDTO,cancelRideButton);
             }
         });
 
@@ -682,7 +682,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     }
 
-    private void cancelRide(UserOnRideDTO onRideDTO) {
+    private void cancelRide(UserOnRideDTO onRideDTO, ImageButton cancelRideButton) {
         String finalUrl = HttpUrl
                 .parse(CANCEL_RIDE + onRideDTO.getRideDTO().getRideID())
                 .newBuilder()
@@ -699,16 +699,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         HttpClientUtil.runAsync(request, new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-
+                handler.post(() -> cancelRideButton.setEnabled(true));
             }
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 String responseBody = response.body().string();
+                handler.post(() -> cancelRideButton.setEnabled(true));
             }
         });
     }
-    private void cancelInvitation(UserOnRideDTO onRideDTO) {
+    private void cancelInvitation(UserOnRideDTO onRideDTO, ImageButton cancelInvitation) {
+
         String finalUrl = HttpUrl
                 .parse(CANCEL_INVITATION + onRideDTO.getRideDTO().getInvitationID())
                 .newBuilder()
@@ -725,12 +727,13 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         HttpClientUtil.runAsync(request, new Callback() {
             @Override
             public void onFailure(@NotNull Call call, @NotNull IOException e) {
-
+                handler.post(() -> cancelInvitation.setEnabled(true));
             }
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 String responseBody = response.body().string();
+                handler.post(() -> cancelInvitation.setEnabled(true));
             }
         });
     }

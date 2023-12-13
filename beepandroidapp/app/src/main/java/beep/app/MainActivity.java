@@ -61,8 +61,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void loginClickListener(EditText phoneNumber,RegionItem phoneRegion) {
         if(isValidPhoneNumber(phoneNumber.getText().toString())){
+            loginButton.setEnabled(false);
             callLoginApi(phoneNumber, phoneRegion);
-
         }else{
             phoneNumber.setBackgroundResource(R.drawable.edit_text_error);
             phoneNumber.setError("Invalid phone number");
@@ -92,6 +92,7 @@ public class MainActivity extends AppCompatActivity {
                     System.out.println("got failed " + e.toString());
                     phoneNumber.setBackgroundResource(R.drawable.edit_text_error);
                     phoneNumber.setError("Invalid phone number");
+                    loginButton.setEnabled(true);
                 });
             }
 

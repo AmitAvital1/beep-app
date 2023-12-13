@@ -30,6 +30,7 @@ import okhttp3.Response;
 public class  RegisterActivity extends AppCompatActivity {
 
     private UserDTO userDTO;
+    private Button completeAction;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,7 +38,7 @@ public class  RegisterActivity extends AppCompatActivity {
         setContentView(R.layout.activity_register);
         userDTO = (UserDTO) getIntent().getSerializableExtra("userDTO");
 
-        Button completeAction = findViewById(R.id.completeButton);
+        completeAction = findViewById(R.id.completeButton);
         completeAction.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -46,6 +47,7 @@ public class  RegisterActivity extends AppCompatActivity {
         });
     }
     public void completeAction() {
+        completeAction.setEnabled(false);
         EditText firstNameEditText = findViewById(R.id.firstNameEditText);
         EditText lastNameEditText = findViewById(R.id.lastNameEditText);
 
@@ -83,6 +85,7 @@ public class  RegisterActivity extends AppCompatActivity {
                     firstNameEditText.setError("Error");
                     lastNameEditText.setError("Error");
                     System.out.println(e.toString());
+                    completeAction.setEnabled(true);
                 });
             }
 
@@ -93,11 +96,13 @@ public class  RegisterActivity extends AppCompatActivity {
                     runOnUiThread(() -> {
                         firstNameEditText.setBackgroundResource(R.drawable.edit_text_error);
                         firstNameEditText.setError("Invalid First Name");
+                        completeAction.setEnabled(true);
                     });
                 }else if(response.code() == 406) { //Register
                     runOnUiThread(() -> {
                         lastNameEditText.setBackgroundResource(R.drawable.edit_text_error);
-                        lastNameEditText.setError("Invalid Last Name");;
+                        lastNameEditText.setError("Invalid Last Name");
+                        completeAction.setEnabled(true);
                     });
                 }else{
                     runOnUiThread(() -> {

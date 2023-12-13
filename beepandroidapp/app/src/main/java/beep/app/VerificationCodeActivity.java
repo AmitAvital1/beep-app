@@ -57,6 +57,7 @@ public class VerificationCodeActivity extends AppCompatActivity {
         btnSubmit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                btnSubmit.setEnabled(false);
                 String digit1 = editTextDigit1.getText().toString();
                 String digit2 = editTextDigit2.getText().toString();
                 String digit3 = editTextDigit3.getText().toString();
@@ -84,6 +85,7 @@ public class VerificationCodeActivity extends AppCompatActivity {
                     public void onFailure(@NotNull Call call, @NotNull IOException e) {
                         runOnUiThread(() -> {
                             errorTextView.setVisibility(View.VISIBLE);
+                            btnSubmit.setEnabled(true);
                         });
                     }
 
@@ -92,6 +94,7 @@ public class VerificationCodeActivity extends AppCompatActivity {
                         String responseBody = response.body().string();
                         if (response.code() == 400) { //Invalid code
                             runOnUiThread(() -> {
+                                btnSubmit.setEnabled(true);
                                 errorTextView.setVisibility(View.VISIBLE);
                             });
                         }else if(response.code() == 201) { //Register
