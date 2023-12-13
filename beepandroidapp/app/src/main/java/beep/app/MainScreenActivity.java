@@ -29,6 +29,7 @@ import android.provider.ContactsContract;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -62,6 +63,7 @@ import search.UserPhoneExistDTO;
 public class MainScreenActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 123;
+    private static final int MY_PERMISSIONS_REQUEST_LOCATION = 1234;
     private static boolean CONTACT_HAS_FETCHED = false;
     private static boolean CONTACT_THREAD_HAS_CALLED = false;
 
@@ -76,6 +78,8 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
     private MapFragment mapFragment;
     private FragmentManager fragmentManager;
     private Fragment notMapFragment;
+    private Button enableLocationButton;
+    private boolean mapLoaded = false;
 
 
     private SearchView searchView;
@@ -89,11 +93,17 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_screen);
 
+
+        enableLocationButton = findViewById(R.id.enableLocation);
+        enableLocationButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                requestLocationPermission();
+            }
+        });
         mapFragment = new MapFragment();
         fragmentManager = getSupportFragmentManager();
-        fragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, mapFragment)
-                .commit();
+        requestLocationPermission();
 
         userDTO = (UserDTO) getIntent().getSerializableExtra("userDTO");
 
@@ -104,7 +114,6 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         contactRecyclerView = findViewById(R.id.contactRecyclerView);
         fullName = navigationView.getHeaderView(0).findViewById(R.id.name_text_view);
         ridesNum = navigationView.getHeaderView(0).findViewById(R.id.num_rides_text_view);
-
         fullName.setText(userDTO.getFirstName() + " " + userDTO.getLastName());
 
         setSupportActionBar(toolbar);
@@ -142,6 +151,19 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         } else {
             // Permission already granted, proceed with contact retrieval
             updateContactList("");
+        }
+    }
+    private void requestLocationPermission() {
+        // Check if the permission is not granted
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+            // Request the permission
+            ActivityCompat.requestPermissions(this,
+                    new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION}, MY_PERMISSIONS_REQUEST_LOCATION);
+        } else {
+            // Permission already granted, proceed with contact retrieval
+            enableLocationButton.setVisibility(View.INVISIBLE);
+            switchToMapFragment();
         }
     }
     private void updateContactList(String query) {
@@ -266,6 +288,24 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
                 // You may want to explain why you need the permission before requesting again
             }
         }
+        else if (requestCode == MY_PERMISSIONS_REQUEST_LOCATION) {
+            // Check if the permission was granted
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                enableLocationButton.setVisibility(View.INVISIBLE);
+                switchToMapFragment();
+            } else {
+                enableLocationButton.setVisibility(View.VISIBLE);
+            }
+        }
+    }
+
+    private void switchToMapFragment() {
+        if(!mapLoaded) {
+            fragmentManager.beginTransaction()
+                    .replace(R.id.fragmentContainer, mapFragment)
+                    .commit();
+            mapLoaded = true;
+        }
     }
 
     @Override
@@ -276,12 +316,12 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
             main_screen_layout.closeDrawer(GravityCompat.START);
             return true;
         }
+        enableLocationButton.setVisibility(View.INVISIBLE);
         lastSelectedItem = itemId;
         if (itemId == R.id.nav_home) {
-            fragmentManager.beginTransaction().remove(notMapFragment).commit();
-            //fragmentManager.beginTransaction()
-            //        .replace(R.id.fragmentContainer, mapFragment)
-             //       .commit();
+            if (notMapFragment != null)
+                fragmentManager.beginTransaction().remove(notMapFragment).commit();
+            requestLocationPermission();
         } else if (itemId == R.id.nav_locations) {
             Toast.makeText(this, "My Location", Toast.LENGTH_LONG).show();
         } else if (itemId == R.id.nav_rides) {
