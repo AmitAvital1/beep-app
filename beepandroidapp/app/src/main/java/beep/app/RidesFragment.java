@@ -14,6 +14,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -54,6 +55,8 @@ public class RidesFragment extends Fragment {
         ridesRecyclerView = rootView.findViewById(R.id.ridesRecyclerView);
         noRidesTextView = rootView.findViewById(R.id.noRidesTextView);
         ridesRecyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
+        DividerItemDecoration dividerItemDecoration = new DividerItemDecoration(ridesRecyclerView.getContext(), DividerItemDecoration.VERTICAL);
+        ridesRecyclerView.addItemDecoration(dividerItemDecoration);
         handler = new Handler(Looper.myLooper());
 
         fetchRides();
