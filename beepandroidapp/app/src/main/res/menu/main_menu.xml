@@ -13,17 +13,14 @@
             android:id="@+id/nav_rides"
             android:icon="@drawable/rides_icon"
             android:title="My Rides" />
+        <item
+            android:id="@+id/nav_profile"
+            android:icon="@drawable/profile_icon"
+            android:title="Profile" />
+        <item
+            android:id="@+id/nav_logout"
+            android:icon="@drawable/logout_icon"
+            android:title="Logout" />
     </group>
-        <item android:title="Profile">
-            <menu>
-                <item
-                    android:id="@+id/nav_profile"
-                    android:icon="@drawable/profile_icon"
-                    android:title="Profile" />
-                <item
-                    android:id="@+id/nav_logout"
-                    android:icon="@drawable/logout_icon"
-                    android:title="Logout" />
-            </menu>
-        </item>
+
 </menu>

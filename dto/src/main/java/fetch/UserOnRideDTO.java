@@ -6,6 +6,7 @@ public class UserOnRideDTO {
     private boolean onRide;
     private boolean sender;
     private RideDTO rideDTO;
+    private Integer currentRides;
 
     public UserOnRideDTO() {
     }
@@ -38,5 +39,13 @@ public class UserOnRideDTO {
 
     public void setRideDTO(RideDTO rideDTO) {
         this.rideDTO = rideDTO;
+    }
+
+    public Integer getCurrentRides() {
+        return currentRides;
+    }
+
+    public void setCurrentRides(Integer currentRides) {
+        this.currentRides = currentRides;
     }
 }

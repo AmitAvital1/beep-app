@@ -47,6 +47,7 @@ public class FetchDataController {
             UserEntity userEntity = userSenderEntityOptional.get();
             RideInvitationEntity rideInvitationEntity = userEntity.getOnRide();
             UserOnRideDTO userOnRideDTO = new UserOnRideDTO();
+            userOnRideDTO.setCurrentRides(userEntity.getRidesByMostRecent().size());
             if(rideInvitationEntity == null){
                 userOnRideDTO.setOnRide(false);
             }else{

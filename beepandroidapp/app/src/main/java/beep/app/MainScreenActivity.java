@@ -96,12 +96,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
 
 
         enableLocationButton = findViewById(R.id.enableLocation);
-        enableLocationButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                requestLocationPermission();
-            }
-        });
+        enableLocationButton.setOnClickListener(v -> requestLocationPermission());
         mapFragment = new MapFragment();
         fragmentManager = getSupportFragmentManager();
         requestLocationPermission();
@@ -309,6 +304,14 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
             mapLoaded = true;
         }
     }
+    private void switchNotMapFragment(Fragment fragment){
+        if (notMapFragment != null)
+            fragmentManager.beginTransaction().remove(notMapFragment).commit();
+        notMapFragment = fragment;
+        fragmentManager.beginTransaction()
+                .add(R.id.fragmentContainer, notMapFragment)
+                .commit();
+    }
 
     @Override
     public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
@@ -327,14 +330,9 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         } else if (itemId == R.id.nav_locations) {
             Toast.makeText(this, "My Location", Toast.LENGTH_LONG).show();
         } else if (itemId == R.id.nav_rides) {
-            notMapFragment = new RidesFragment();
-            fragmentManager.beginTransaction()
-                    .add(R.id.fragmentContainer, notMapFragment)
-                    .commit();
+            switchNotMapFragment(new RidesFragment());
         } else if (itemId == R.id.nav_profile) {
-            fragmentManager.beginTransaction()
-                .replace(R.id.fragmentContainer, new ProfileFragment())
-                .commit();
+            switchNotMapFragment(new ProfileFragment());
             Toast.makeText(this, "My Profile", Toast.LENGTH_LONG).show();
         } else if (itemId == R.id.nav_logout) {
             Toast.makeText(this, "Logout", Toast.LENGTH_LONG).show();
@@ -375,6 +373,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
 
     private void contactItemClicked(ContactItem item) {
         if (!invitationSent) {
+            searchView.clearFocus();
             invitationSent = true;
             String finalUrl = HttpUrl
                     .parse(INVITE)
@@ -413,5 +412,8 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
                 }
             });
         }
+    }
+    public void setCurrentRidesNum(int ridesNum){
+        this.ridesNum.setText(ridesNum + " rides");
     }
 }

@@ -255,6 +255,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                             if(otherMarker != null)
                                 otherMarker.remove();
                         }
+                        ((MainScreenActivity) getActivity()).setCurrentRidesNum(userOnRideDTO.getCurrentRides());
                     }
                 });
             }

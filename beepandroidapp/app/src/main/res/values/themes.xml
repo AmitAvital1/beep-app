@@ -15,5 +15,9 @@
         <item name="android:windowEnterAnimation">@anim/slide_in_bottom</item>
         <item name="android:windowExitAnimation">@anim/slide_out_bottom</item>
     </style>
+    <style name="NavDrawerDividerStyle">
+        <item name="android:layout_height">1dp</item>
+        <item name="android:background">@color/dividerColor</item> <!-- Replace with your desired color -->
+    </style>
 
 </resources>
