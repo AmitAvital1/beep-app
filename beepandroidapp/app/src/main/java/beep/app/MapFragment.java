@@ -76,30 +76,28 @@ import ride.OnRideRefresherDTO;
 
 
 public class MapFragment extends Fragment implements OnMapReadyCallback {
-    private final int LOCATION_PERMISSION_REQUEST_CODE = 1;
-    private boolean firstFetch = true;
-    private boolean recenterOnLocationChange = false;
+    private static final long FETCH_IF_HAS_RIDE = 4000; // 4 seconds
+    private static final long FETCH_IN_RIDE = 300; // 300ms
+
     private Location currentLocation;
     private Location lastLocation;
     private float lastBearing = 0;
+
+    private GoogleMap mMap;
     private FusedLocationProviderClient fusedLocationProviderClient;
     private CameraPosition prevCameraPosition;
-    private static final long FETCH_IF_HAS_RIDE = 4000; // 4 seconds
-    private static final long FETCH_IN_RIDE = 300; // 300ms
-    private Handler handler = new Handler(Looper.myLooper());
-    private Runnable onRideDataFetch;
+    private LocationCallback currentLocationCallback;
+
     private Dialog dialog = null;
     private Dialog dialogComplete = null;
     private Marker otherMarker = null;
+
+    private boolean firstFetch = true;
     private boolean showOtherFocusOnMap = false;
-    private boolean focusThisFragment = true;
-    private ImageButton focusOnOtherButton;
-    private LocationCallback currentLocationCallback;
 
-
-    private GoogleMap mMap;
-
-    private Runnable dataFetchRunnable = new Runnable() {
+    private final Handler handler = new Handler(Looper.myLooper());
+    private Runnable onRideDataFetch;
+    private final Runnable dataFetchRunnable = new Runnable() {
         @Override
         public void run() {
             // Fetch data from the server
@@ -121,11 +119,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 }
                 if (allPermissionsGranted) {
                     getLastLocation();
-                    startDataFetch(dataFetchRunnable,FETCH_IF_HAS_RIDE);
+                    startDataFetch(dataFetchRunnable, FETCH_IF_HAS_RIDE);
                 } else {
                     // Permission is denied, handle it
                 }
             });
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_map, container, false);
@@ -158,6 +157,31 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
     @SuppressLint("MissingPermission")
     public void getLastLocation() {
         mMap.setMyLocationEnabled(true);
+        createCurrentLocationCallback();
+        createLocationUpdatesListener();
+    }
+    @SuppressLint("MissingPermission")
+    private void createLocationUpdatesListener() {
+        fusedLocationProviderClient.requestLocationUpdates(
+                new LocationRequest()
+                        .setInterval(1000) // Update every second
+                        .setFastestInterval(500), // Update as often as possible
+                currentLocationCallback
+                , Looper.myLooper()
+        );
+        // Set a click listener for the "My Location" button
+        mMap.setOnMyLocationButtonClickListener(() -> {
+            if (currentLocation != null) {
+                LatLng myLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 50));
+            }
+            prevCameraPosition = mMap.getCameraPosition();
+            showOtherFocusOnMap = false;
+            return true; // Indicates that the listener has consumed the event
+        });
+    }
+
+    private void createCurrentLocationCallback() {
         currentLocationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(LocationResult locationResult) {
@@ -184,23 +208,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 }
             }
         };
-        fusedLocationProviderClient.requestLocationUpdates(
-                new LocationRequest()
-                        .setInterval(1000) // Update every second
-                        .setFastestInterval(500), // Update as often as possible
-                currentLocationCallback
-                , Looper.myLooper()
-        );
-        // Set a click listener for the "My Location" button
-        mMap.setOnMyLocationButtonClickListener(() -> {
-            if (currentLocation != null) {
-                LatLng myLocation = new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude());
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myLocation, 50));
-            }
-            prevCameraPosition = mMap.getCameraPosition();
-            showOtherFocusOnMap = false;
-            return true; // Indicates that the listener has consumed the event
-        });
     }
 
     public Location getCurrentLocation() {
@@ -215,6 +222,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         handler.postDelayed(runnable, fetchTime);
     }
 
+    /*This function fetch data from server every FETCH_ON_RIDE
+    * If there is open invitation or the user is on Ride then UserDTO.isOnRide will be true*/
     private void fetchDataFromServer() {
         String finalUrl = HttpUrl
                 .parse(FETCH_ON_RIDE)
@@ -247,12 +256,12 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                 callInvitationDialog(userOnRideDTO);
                             else if (userOnRideDTO.getRideDTO().getInvitationStatus().equals("ACCEPTED")) {
                                 setOnRideUi(userOnRideDTO);
-                                if(dialog == null && otherMarker == null)
-                                    createSenderMarker(userOnRideDTO.isSender(),userOnRideDTO);
+                                if (dialog == null && otherMarker == null)
+                                    createSenderMarker(userOnRideDTO.isSender(), userOnRideDTO);
                             }
-                        }else{
+                        } else {
                             removeDialog(dialog);
-                            if(otherMarker != null)
+                            if (otherMarker != null)
                                 otherMarker.remove();
                         }
                         ((MainScreenActivity) getActivity()).setCurrentRidesNum(userOnRideDTO.getCurrentRides());
@@ -276,7 +285,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 handler.postDelayed(this, FETCH_IN_RIDE);
             }
         };
-        startDataFetch(onRideDataFetch,FETCH_IN_RIDE);
+        startDataFetch(onRideDataFetch, FETCH_IN_RIDE);
     }
 
     private void removeCompleteDialog(Dialog dialogComplete) {
@@ -303,19 +312,19 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
     }
 
-  @Override
-  public void onDestroy() {
+    @Override
+    public void onDestroy() {
         handler.removeCallbacks(dataFetchRunnable);
         removeDialog(dialog);
         removeCompleteDialog(dialogComplete);
         otherMarker = null;
         showOtherFocusOnMap = false;
         fusedLocationProviderClient.removeLocationUpdates(currentLocationCallback);
-      if(dialog != null)
-          dialog.dismiss();
-      if(dialogComplete != null)
-          dialogComplete.dismiss();
-       super.onDestroy();
+        if (dialog != null)
+            dialog.dismiss();
+        if (dialogComplete != null)
+            dialogComplete.dismiss();
+        super.onDestroy();
     }
 
 
@@ -324,8 +333,6 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         dialog = new Dialog(requireActivity());
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.bottom_invitation_dialog);
-        dialog.setCanceledOnTouchOutside(false);
-        dialog.setCancelable(false);
 
         Button acceptButton = dialog.findViewById(R.id.acceptButton);
         Button rejectButton = dialog.findViewById(R.id.rejectButton);
@@ -337,15 +344,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         if (isSender) {
             acceptButton.setVisibility(View.INVISIBLE);
             rejectButton.setVisibility(View.INVISIBLE);
-        }else{
+        } else {
             cancelInvitation.setVisibility(View.INVISIBLE);
         }
 
-        dialog.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
-        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        dialog.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
-        dialog.getWindow().setGravity(Gravity.BOTTOM);
+        configureNonRemoveDialog(dialog);
         dialog.show();
 
         createSenderMarker(isSender, userOnRideDTO);
@@ -354,7 +357,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(View v) {
                 acceptButton.setEnabled(false);
-                acceptInvitation(userOnRideDTO,acceptButton);
+                acceptInvitation(userOnRideDTO, acceptButton);
 
             }
         });
@@ -363,9 +366,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(View v) {
                 rejectButton.setEnabled(false);
-                rejectInvitation(userOnRideDTO,rejectButton);
+                rejectInvitation(userOnRideDTO, rejectButton);
                 removeDialog(dialog);
-                if(otherMarker != null)
+                if (otherMarker != null)
                     otherMarker.remove();
                 showOtherFocusOnMap = false;
             }
@@ -374,9 +377,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(View v) {
                 cancelInvitation.setEnabled(false);
-                cancelInvitation(userOnRideDTO,cancelInvitation);
+                cancelInvitation(userOnRideDTO, cancelInvitation);
                 removeDialog(dialog);
-                if(otherMarker != null)
+                if (otherMarker != null)
                     otherMarker.remove();
                 showOtherFocusOnMap = false;
             }
@@ -384,8 +387,18 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     }
 
+    private void configureNonRemoveDialog(Dialog dialog) {
+        dialog.setCanceledOnTouchOutside(false);
+        dialog.setCancelable(false);
+        dialog.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        dialog.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
+        dialog.getWindow().setGravity(Gravity.BOTTOM);
+    }
+
     private void createSenderMarker(boolean isSender, UserOnRideDTO userOnRideDTO) {
-        if(!isSender){
+        if (!isSender) {
             BitmapDrawable bitmap = (BitmapDrawable) getResources().getDrawable(R.drawable.car, getContext().getTheme());
             Bitmap b = bitmap.getBitmap();
             Bitmap smallMarker = Bitmap.createScaledBitmap(b, 78, 78, false);
@@ -406,7 +419,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 .toString();
 
         Gson gson = new Gson();
-        String json = gson.toJson(new LocationDTO(getShortAddress(requireContext(),currentLocation), getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude(),lastBearing));
+        String json = gson.toJson(new LocationDTO(getShortAddress(requireContext(), currentLocation), getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude(), lastBearing));
         RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
@@ -423,15 +436,16 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                if(response.code() == 408){
+                if (response.code() == 408) {
                     //Request timeout - canceled by the sender.
-                }else{
+                } else {
                     showOtherFocusOnMap = true;
                 }
                 handler.post(() -> acceptButton.setEnabled(true));
             }
         });
     }
+
     private void rejectInvitation(UserOnRideDTO userOnRideDTO, Button rejectButton) {
         String finalUrl = HttpUrl
                 .parse(REJECT_INVITATION + userOnRideDTO.getRideDTO().getInvitationID())
@@ -455,9 +469,9 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                if(response.code() == 408){
+                if (response.code() == 408) {
                     //Request timeout - canceled by the sender.
-                }else{
+                } else {
 
                 }
                 handler.post(() -> rejectButton.setEnabled(true));
@@ -494,7 +508,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         }
 
         Gson gson = new Gson();
-        String json = gson.toJson(new LocationDTO(null, getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude(),lastBearing));
+        String json = gson.toJson(new LocationDTO(null, getCurrentLocation().getLatitude(), getCurrentLocation().getLongitude(), lastBearing));
         RequestBody requestBody = RequestBody.create(json, MediaType.parse("application/json"));
 
         Request request = new Request.Builder()
@@ -525,15 +539,14 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                                 updateMapCameraToOtherAndMarker(rideRefresherDTO, sender);
                             }
 
-                        }else if(rideRefresherDTO.getRideStatus().equals("COMPLETED")){
+                        } else if (rideRefresherDTO.getRideStatus().equals("COMPLETED")) {
                             handler.removeCallbacks(onRideDataFetch);
-                                createRideCompleteDialog(rideRefresherDTO,sender,userOnRideDTO,false);
-                            startDataFetch(dataFetchRunnable,FETCH_IF_HAS_RIDE);
-                        }
-                        else if(rideRefresherDTO.getRideStatus().equals("CANCELED")){
+                            createRideCompleteDialog(rideRefresherDTO, sender, userOnRideDTO, false);
+                            startDataFetch(dataFetchRunnable, FETCH_IF_HAS_RIDE);
+                        } else if (rideRefresherDTO.getRideStatus().equals("CANCELED")) {
                             handler.removeCallbacks(onRideDataFetch);
-                            createRideCompleteDialog(rideRefresherDTO,sender,userOnRideDTO,true);
-                            startDataFetch(dataFetchRunnable,FETCH_IF_HAS_RIDE);
+                            createRideCompleteDialog(rideRefresherDTO, sender, userOnRideDTO, true);
+                            startDataFetch(dataFetchRunnable, FETCH_IF_HAS_RIDE);
                         }
                     }
                 });
@@ -546,34 +559,28 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         dialogComplete = new Dialog(requireActivity());
         dialogComplete.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialogComplete.setContentView(R.layout.bottom_complete_ride_dialog);
-        dialogComplete.setCanceledOnTouchOutside(false);
-        dialogComplete.setCancelable(false);
 
         Button okButton = dialogComplete.findViewById(R.id.okButton);
         TextView textView = dialogComplete.findViewById(R.id.complete_text);
-        if(!isCanceled) {
+        if (!isCanceled) {
             if (!sender)
                 textView.setText(userOnRideDTO.getRideDTO().getUserSender().getFirstName() + " " + userOnRideDTO.getRideDTO().getUserSender().getLastName() + " is arrived. Beep Completed");
             else
                 textView.setText("You arrived to " + userOnRideDTO.getRideDTO().getUserReceiver().getFirstName() + " " + userOnRideDTO.getRideDTO().getUserReceiver().getLastName() + ". Beep Completed");
-        }else{
+        } else {
             textView.setText("Ride have been canceled and stopped");
         }
         okButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 removeCompleteDialog(dialogComplete);
-                if(otherMarker != null)
+                if (otherMarker != null)
                     otherMarker.remove();
                 showOtherFocusOnMap = false;
             }
         });
 
-        dialogComplete.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
-        dialogComplete.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        dialogComplete.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        dialogComplete.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
-        dialogComplete.getWindow().setGravity(Gravity.BOTTOM);
+        configureNonRemoveDialog(dialogComplete);
         dialogComplete.show();
     }
 
@@ -590,8 +597,8 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
 
     private void updateMapCameraToOtherAndMarker(OnRideRefresherDTO rideRefresherDTO, boolean sender) {
         LatLng senderLatLng = new LatLng(rideRefresherDTO.getSenderCurrentLocation().getLatitude(), rideRefresherDTO.getSenderCurrentLocation().getLongitude());
-        LatLng recieverLatLng = new LatLng(rideRefresherDTO.getReceiverCurrentLocation().getLatitude(),rideRefresherDTO.getReceiverCurrentLocation().getLongitude());
-        GoogleMap.CancelableCallback cancelableCallback =  new GoogleMap.CancelableCallback() {
+        LatLng recieverLatLng = new LatLng(rideRefresherDTO.getReceiverCurrentLocation().getLatitude(), rideRefresherDTO.getReceiverCurrentLocation().getLongitude());
+        GoogleMap.CancelableCallback cancelableCallback = new GoogleMap.CancelableCallback() {
             @Override
             public void onCancel() {
 
@@ -602,23 +609,22 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
                 prevCameraPosition = mMap.getCameraPosition();
             }
         };
-        if(!sender){
+        if (!sender) {
             otherMarker.setPosition(senderLatLng);
             otherMarker.setRotation(rideRefresherDTO.getSenderCurrentLocation().getBearing());
-            if(showOtherFocusOnMap && prevCameraPosition.equals(mMap.getCameraPosition())) {
+            if (showOtherFocusOnMap && prevCameraPosition.equals(mMap.getCameraPosition())) {
                 //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(senderLatLng, 30));
                 //prevCameraPosition = mMap.getCameraPosition();
                 mMap.animateCamera(
                         CameraUpdateFactory.newCameraPosition(new CameraPosition.Builder().target(senderLatLng).zoom(17).bearing(0).build())
-                        ,cancelableCallback);
+                        , cancelableCallback);
             }
-        }
-        else {
+        } else {
             otherMarker.setPosition(recieverLatLng);
             otherMarker.setRotation(rideRefresherDTO.getReceiverCurrentLocation().getBearing());
-            if(showOtherFocusOnMap && prevCameraPosition.equals(mMap.getCameraPosition())) {
+            if (showOtherFocusOnMap && prevCameraPosition.equals(mMap.getCameraPosition())) {
                 //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(recieverLatLng, 30));
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(recieverLatLng, 30),cancelableCallback);
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(recieverLatLng, 30), cancelableCallback);
             }
         }
     }
@@ -636,13 +642,11 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         dialog = new Dialog(requireActivity());
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.bottom_on_ride_dialog);
-        dialog.setCanceledOnTouchOutside(false);
-        dialog.setCancelable(false);
 
-        focusOnOtherButton = dialog.findViewById(R.id.showOtherIcon);
+        ImageButton focusOnOtherButton = dialog.findViewById(R.id.showOtherIcon);
         ImageButton cancelRideButton = dialog.findViewById(R.id.cancelRide);
 
-        if(sender)
+        if (sender)
             focusOnOtherButton.setImageResource(R.drawable.user);
 
         focusOnOtherButton.setOnClickListener(new View.OnClickListener() {
@@ -657,7 +661,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             @Override
             public void onClick(View view) {
                 cancelRideButton.setEnabled(true);
-                cancelRide(onRideDTO,cancelRideButton);
+                cancelRide(onRideDTO, cancelRideButton);
             }
         });
 
@@ -674,11 +678,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
         duration.setText(rideRefresherDTO.getDurationTime());
         distance.setText(rideRefresherDTO.getDistanceText());
 
-        dialog.getWindow().setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
-        dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        dialog.getWindow().getAttributes().windowAnimations = R.style.DialogAnimation;
-        dialog.getWindow().setGravity(Gravity.BOTTOM);
+        configureNonRemoveDialog(dialog);
         dialog.show();
 
     }
@@ -710,6 +710,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         });
     }
+
     private void cancelInvitation(UserOnRideDTO onRideDTO, ImageButton cancelInvitation) {
 
         String finalUrl = HttpUrl
@@ -738,6 +739,7 @@ public class MapFragment extends Fragment implements OnMapReadyCallback {
             }
         });
     }
+
     public String getShortAddress(Context context, Location location) {
         Geocoder geocoder = new Geocoder(context, Locale.getDefault());
         String shortAddress = "";

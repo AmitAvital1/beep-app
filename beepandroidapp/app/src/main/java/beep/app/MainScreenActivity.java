@@ -94,22 +94,27 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_screen);
 
-
+        /*Location button - handle get location provide (invisible if there is)*/
         enableLocationButton = findViewById(R.id.enableLocation);
         enableLocationButton.setOnClickListener(v -> requestLocationPermission());
-        mapFragment = new MapFragment();
-        fragmentManager = getSupportFragmentManager();
-        requestLocationPermission();
 
-        userDTO = (UserDTO) getIntent().getSerializableExtra("userDTO");
-
-        main_screen_layout=findViewById(R.id.main_screen);
-        navigationView=findViewById(R.id.nav_view);
+        main_screen_layout = findViewById(R.id.main_screen);
+        navigationView = findViewById(R.id.nav_view);
         toolbar = findViewById(R.id.toolbar);
         searchView = findViewById(R.id.searchView);
         contactRecyclerView = findViewById(R.id.contactRecyclerView);
         fullName = navigationView.getHeaderView(0).findViewById(R.id.name_text_view);
         ridesNum = navigationView.getHeaderView(0).findViewById(R.id.num_rides_text_view);
+
+        /*Main fragment - map fragment object live during the application running for reusing*/
+        mapFragment = new MapFragment();
+        fragmentManager = getSupportFragmentManager();
+
+        /*Request location provider - after getting the permission map loaded*/
+        requestLocationPermission();
+
+        /*Update first menu details*/
+        userDTO = (UserDTO) getIntent().getSerializableExtra("userDTO");
         fullName.setText(userDTO.getFirstName() + " " + userDTO.getLastName());
 
         setSupportActionBar(toolbar);
@@ -118,7 +123,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         searchView.bringToFront();
         navigationView.bringToFront();
 
-        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this,main_screen_layout,toolbar,R.string.navigation_drawer_open,R.string.navigation_drawer_close);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, main_screen_layout, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         main_screen_layout.addDrawerListener(toggle);
         toggle.syncState();
         navigationView.setNavigationItemSelectedListener(this);
@@ -134,7 +139,6 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         });
         contactRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         contactRecyclerView.setAdapter(contactAdapter);
-
         addSearchViewListeners();
     }
 
@@ -150,6 +154,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
             updateContactList("");
         }
     }
+
     private void requestLocationPermission() {
         // Check if the permission is not granted
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION)
@@ -163,6 +168,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
             switchToMapFragment();
         }
     }
+
     private void updateContactList(String query) {
         // Query contacts based on the search query
         contactList.clear();
@@ -174,10 +180,10 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
                 new String[]{"%" + query + "%"},
                 ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " ASC"
         );
-        if(!CONTACT_HAS_FETCHED){
-            if(!CONTACT_THREAD_HAS_CALLED)
+        if (!CONTACT_HAS_FETCHED) {
+            if (!CONTACT_THREAD_HAS_CALLED)
                 updateAndFetchFirstTime(query);
-        }else {
+        } else {
 
             if (cursor != null) {
                 int nameIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME);
@@ -188,8 +194,8 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
                     if (nameIndex >= 0 && phoneNumberIndex >= 0) {
                         String name = cursor.getString(nameIndex);
                         String phoneNumber = cursor.getString(phoneNumberIndex);
-                        if(phoneNumberToHasUser.containsKey(phoneNumber))
-                            contactList.add(new ContactItem(name,phoneNumber, phoneNumberToHasUser.get(phoneNumber)));
+                        if (phoneNumberToHasUser.containsKey(phoneNumber))
+                            contactList.add(new ContactItem(name, phoneNumber, phoneNumberToHasUser.get(phoneNumber)));
                     }
                 }
 
@@ -198,10 +204,11 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
 
             // Update the RecyclerView with the new contact list
             contactAdapter.notifyDataSetChanged();
-            if(searchView.hasFocus())
+            if (searchView.hasFocus())
                 contactRecyclerView.setVisibility(contactList.isEmpty() ? View.GONE : View.VISIBLE);
         }
     }
+
     private void updateAndFetchFirstTime(String query) {
         Thread fetchItemsAndShow = new Thread(() -> {
             List<UserPhoneExistDTO> listPhoneUsersDTO = new ArrayList<>();
@@ -210,7 +217,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
 
             listPhoneUsersDTO = isUsersApiList(listPhoneUsersDTO);
 
-            listPhoneUsersDTO.stream().forEach(dto -> phoneNumberToHasUser.put(dto.getPhoneNumber(),dto.isHasUser()));
+            listPhoneUsersDTO.stream().forEach(dto -> phoneNumberToHasUser.put(dto.getPhoneNumber(), dto.isHasUser()));
 
             CONTACT_HAS_FETCHED = true;
             runOnUiThread(() -> {
@@ -243,6 +250,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
             cursor.close();
         }
     }
+
     private static List<UserPhoneExistDTO> isUsersApiList(List<UserPhoneExistDTO> listPhoneUsersDTO) {
         String finalUrl = HttpUrl
                 .parse(IS_USERS)
@@ -263,7 +271,8 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
             Response response = HttpClientUtil.runSync(request);
             if (response.isSuccessful()) {
                 String responseBody = response.body().string();
-                TypeToken<ArrayList<UserPhoneExistDTO>> typeToken = new TypeToken<ArrayList<UserPhoneExistDTO>>() {};
+                TypeToken<ArrayList<UserPhoneExistDTO>> typeToken = new TypeToken<ArrayList<UserPhoneExistDTO>>() {
+                };
                 listPhoneUsersDTO = gson.fromJson(responseBody, typeToken.getType());
             }
         } catch (IOException e) {
@@ -284,8 +293,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
                 // Permission denied, handle accordingly (e.g., show a message)
                 // You may want to explain why you need the permission before requesting again
             }
-        }
-        else if (requestCode == MY_PERMISSIONS_REQUEST_LOCATION) {
+        } else if (requestCode == MY_PERMISSIONS_REQUEST_LOCATION) {
             // Check if the permission was granted
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 enableLocationButton.setVisibility(View.INVISIBLE);
@@ -297,14 +305,15 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
     }
 
     private void switchToMapFragment() {
-        if(!mapLoaded) {
+        if (!mapLoaded) {
             fragmentManager.beginTransaction()
                     .replace(R.id.fragmentContainer, mapFragment)
                     .commit();
             mapLoaded = true;
         }
     }
-    private void switchNotMapFragment(Fragment fragment){
+
+    private void switchNotMapFragment(Fragment fragment) {
         if (notMapFragment != null)
             fragmentManager.beginTransaction().remove(notMapFragment).commit();
         notMapFragment = fragment;
@@ -317,7 +326,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
     public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
         int itemId = menuItem.getItemId();
 
-        if(lastSelectedItem == itemId) {
+        if (lastSelectedItem == itemId) {
             main_screen_layout.closeDrawer(GravityCompat.START);
             return true;
         }
@@ -337,7 +346,8 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
         } else if (itemId == R.id.nav_logout) {
             Toast.makeText(this, "Logout", Toast.LENGTH_LONG).show();
         }
-        main_screen_layout.closeDrawer(GravityCompat.START); return true;
+        main_screen_layout.closeDrawer(GravityCompat.START);
+        return true;
     }
 
     private void addSearchViewListeners() {
@@ -356,7 +366,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
             }
         });
 
-        searchView.setOnQueryTextFocusChangeListener((v,hasFocus) -> {
+        searchView.setOnQueryTextFocusChangeListener((v, hasFocus) -> {
             // Request permission to read contacts when the search view gains focus
             if (hasFocus) {
                 requestContactsPermission();
@@ -401,6 +411,7 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
                     invitationSent = false;
                     runOnUiThread(() -> Toast.makeText(MainScreenActivity.this, e.toString(), Toast.LENGTH_LONG).show());
                 }
+
                 @Override
                 public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                     String responseBody = response.body().string();
@@ -413,7 +424,8 @@ public class MainScreenActivity extends AppCompatActivity implements NavigationV
             });
         }
     }
-    public void setCurrentRidesNum(int ridesNum){
+
+    public void setCurrentRidesNum(int ridesNum) {
         this.ridesNum.setText(ridesNum + " rides");
     }
 }
