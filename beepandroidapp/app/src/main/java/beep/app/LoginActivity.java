@@ -6,8 +6,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.provider.CalendarContract;
-import android.text.style.BackgroundColorSpan;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
@@ -33,7 +31,7 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 
-public class MainActivity extends AppCompatActivity {
+public class LoginActivity extends AppCompatActivity {
 
     private Spinner spinnerRegion;
     private EditText phoneNumber;
@@ -103,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
                     runOnUiThread(() -> {
                         phoneNumber.setBackgroundResource(R.drawable.edit_text_valid);
                         UserDTO userDTO = gson.fromJson(responseBody, UserDTO.class);
-                        Intent intent = new Intent(MainActivity.this, VerificationCodeActivity.class);
+                        Intent intent = new Intent(LoginActivity.this, VerificationCodeActivity.class);
                         intent.putExtra("userDTO", userDTO);
                         startActivity(intent);
                     });

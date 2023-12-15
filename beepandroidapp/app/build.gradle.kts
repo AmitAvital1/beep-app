@@ -40,7 +40,7 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.10.0")
     // https://mvnrepository.com/artifact/com.google.code.gson/gson
     implementation("com.google.code.gson:gson:2.8.5")
-    implementation(files("C:\\Users\\USER\\IdeaProjects\\beep-app\\dto\\target\\dto-1.0-SNAPSHOT.jar"))
+    implementation(fileTree(mapOf("dir" to "../../dto/target", "include" to listOf("*.jar"))))
     implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("com.google.android.gms:play-services-location:21.0.1")
     testImplementation("junit:junit:4.13.2")
